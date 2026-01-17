@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LANGUAGES, SF_NEIGHBORHOODS } from '../../types/registry';
 import { FileCheck, Building2, MapPin, Phone, Globe, CheckCircle, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface ProviderOnboardingProps {
   onComplete: (data: ProviderFormData) => Promise<{ error?: string }>;
@@ -22,6 +23,7 @@ export interface ProviderFormData {
 }
 
 export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
+  const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,30 +43,26 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
     languages: ['English'],
   });
 
-  const handleVerifyLicense = async () => {
-    if (!formData.license_number.trim()) {
-      setError('Please enter your license number');
+  const handleVerifyLicense = () => {
+    const licenseNumber = formData.license_number.trim();
+
+    if (!licenseNumber) {
+      setError(t('onboarding.enterLicenseNumber'));
       return;
     }
 
-    setLoading(true);
-    setError('');
-
-    // TODO: Integrate with CA licensing database
-    // For now, simulate verification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Basic format check for CA FCC license (e.g., 384001234)
+    // Basic format check - 9 digits
     const licensePattern = /^\d{9}$/;
-    if (licensePattern.test(formData.license_number.trim())) {
-      setVerificationStatus('verified');
-      setStep(2);
-    } else {
-      setVerificationStatus('failed');
-      setError('License number could not be verified. Please check and try again, or contact support.');
+    if (!licensePattern.test(licenseNumber)) {
+      setError(t('onboarding.licenseVerificationFailed'));
+      return;
     }
 
-    setLoading(false);
+    // Format is valid - proceed to next step
+    // Actual license verification will be done manually in batch
+    setVerificationStatus('verified');
+    setError('');
+    setStep(2);
   };
 
   const handleToggleLanguage = (language: string) => {
@@ -102,7 +100,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
               }`}>
                 1
               </div>
-              <span className="text-sm font-medium">Verify License</span>
+              <span className="text-sm font-medium">{t('onboarding.verifyLicense')}</span>
             </div>
             <div className="w-12 h-0.5 bg-gray-200" />
             <div className={`flex items-center gap-2 ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -111,7 +109,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
               }`}>
                 2
               </div>
-              <span className="text-sm font-medium">Program Info</span>
+              <span className="text-sm font-medium">{t('onboarding.programInfo')}</span>
             </div>
           </div>
         </div>
@@ -123,15 +121,15 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FileCheck size={32} className="text-blue-600" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">Verify Your License</h2>
+                <h2 className="text-xl font-bold text-gray-900">{t('onboarding.verifyYourLicense')}</h2>
                 <p className="text-gray-600 mt-1">
-                  Enter your California FCC license number to get started
+                  {t('onboarding.enterLicensePrompt')}
                 </p>
               </div>
 
               <div className="max-w-sm mx-auto">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  FCC License Number
+                  {t('onboarding.fccLicenseNumber')}
                 </label>
                 <input
                   type="text"
@@ -141,7 +139,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg tracking-wider"
                 />
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  Your 9-digit license number from CA Community Care Licensing
+                  {t('onboarding.licenseNumberHelp')}
                 </p>
 
                 {error && (
@@ -154,7 +152,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                 {verificationStatus === 'verified' && (
                   <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg mt-4">
                     <CheckCircle size={16} />
-                    <span>License verified!</span>
+                    <span>{t('onboarding.licenseVerified')}</span>
                   </div>
                 )}
 
@@ -163,7 +161,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                   disabled={loading}
                   className="w-full mt-6 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
                 >
-                  {loading ? 'Verifying...' : 'Verify License'}
+                  {loading ? t('onboarding.verifying') : t('onboarding.verifyLicense')}
                 </button>
               </div>
             </div>
@@ -175,9 +173,9 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Building2 size={32} className="text-green-600" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">Program Information</h2>
+                <h2 className="text-xl font-bold text-gray-900">{t('onboarding.programInfo')}</h2>
                 <p className="text-gray-600 mt-1">
-                  Tell families about your program
+                  {t('onboarding.subtitle')}
                 </p>
               </div>
 
@@ -186,7 +184,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Business Name *
+                      {t('onboarding.businessName')} *
                     </label>
                     <input
                       type="text"
@@ -199,7 +197,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Owner Name *
+                      {t('onboarding.ownerName')} *
                     </label>
                     <input
                       type="text"
@@ -215,7 +213,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                 {/* Program Type */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Program Type *
+                    {t('onboarding.programType')} *
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -227,8 +225,8 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <p className="font-medium">Small Family</p>
-                      <p className="text-xs text-gray-500">Up to 8 children</p>
+                      <p className="font-medium">{t('onboarding.smallFamilyShort')}</p>
+                      <p className="text-xs text-gray-500">{t('onboarding.upTo8')}</p>
                     </button>
                     <button
                       type="button"
@@ -239,8 +237,8 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <p className="font-medium">Large Family</p>
-                      <p className="text-xs text-gray-500">Up to 14 children</p>
+                      <p className="font-medium">{t('onboarding.largeFamilyShort')}</p>
+                      <p className="text-xs text-gray-500">{t('onboarding.upTo14')}</p>
                     </button>
                   </div>
                 </div>
@@ -250,7 +248,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       <MapPin size={14} className="inline mr-1" />
-                      ZIP Code *
+                      {t('onboarding.zipCode')} *
                     </label>
                     <input
                       type="text"
@@ -264,14 +262,14 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Neighborhood
+                      {t('onboarding.neighborhood')}
                     </label>
                     <select
                       value={formData.neighborhood}
                       onChange={e => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Select...</option>
+                      <option value="">{t('onboarding.selectNeighborhood')}</option>
                       {SF_NEIGHBORHOODS.map(n => (
                         <option key={n} value={n}>{n}</option>
                       ))}
@@ -284,7 +282,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       <Phone size={14} className="inline mr-1" />
-                      Phone
+                      {t('onboarding.phone')}
                     </label>
                     <input
                       type="tel"
@@ -296,7 +294,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contact Email *
+                      {t('onboarding.contactEmail')} *
                     </label>
                     <input
                       type="email"
@@ -312,7 +310,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <Globe size={14} className="inline mr-1" />
-                    Website (optional)
+                    {t('onboarding.website')}
                   </label>
                   <input
                     type="url"
@@ -326,7 +324,7 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                 {/* Languages */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Languages Spoken
+                    {t('onboarding.languages')}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {LANGUAGES.map(lang => (
@@ -359,14 +357,14 @@ export function ProviderOnboarding({ onComplete }: ProviderOnboardingProps) {
                     onClick={() => setStep(1)}
                     className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
-                    Back
+                    {t('common.back')}
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
                     className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
                   >
-                    {loading ? 'Saving...' : 'Complete Setup'}
+                    {loading ? t('onboarding.settingUp') : t('onboarding.completeSetup')}
                   </button>
                 </div>
               </div>

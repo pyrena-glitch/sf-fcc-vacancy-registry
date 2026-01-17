@@ -42,6 +42,10 @@ export function useAppData() {
     setChildren(prev => [...prev, ...childrenWithIds]);
   };
 
+  const clearChildren = () => {
+    setChildren([]);
+  };
+
   const clearAllData = () => {
     setChildren([]);
     setCapacityConfig(DEFAULT_CAPACITY);
@@ -55,6 +59,7 @@ export function useAppData() {
     updateChild,
     removeChild,
     importChildren,
+    clearChildren,
     clearAllData,
   };
 }

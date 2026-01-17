@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Child } from '../types';
 import { formatAge, getAgeGroup, getAgeGroupConfig } from '../utils/ageGroups';
-import { Pencil, Trash2, UserPlus } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, Trash } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ChildListProps {
@@ -9,10 +9,12 @@ interface ChildListProps {
   onEdit: (child: Child) => void;
   onRemove: (id: string) => void;
   onAdd: () => void;
+  onClearAll?: () => void;
 }
 
-export function ChildList({ children, onEdit, onRemove, onAdd }: ChildListProps) {
+export function ChildList({ children, onEdit, onRemove, onAdd, onClearAll }: ChildListProps) {
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+  const [confirmingClearAll, setConfirmingClearAll] = useState(false);
   // Sort by DOB - oldest children first (earliest DOB at top)
   const sortedChildren = [...children].sort((a, b) => {
     return new Date(a.dateOfBirth).getTime() - new Date(b.dateOfBirth).getTime();
@@ -27,13 +29,49 @@ export function ChildList({ children, onEdit, onRemove, onAdd }: ChildListProps)
             {children.length}
           </span>
         </div>
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
-        >
-          <UserPlus size={16} />
-          Add Child
-        </button>
+        <div className="flex items-center gap-2">
+          {onClearAll && children.length > 0 && (
+            confirmingClearAll ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Clear all?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClearAll();
+                    setConfirmingClearAll(false);
+                  }}
+                  className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingClearAll(false)}
+                  className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingClearAll(true)}
+                className="flex items-center gap-1 px-3 py-2 text-sm text-red-600 bg-red-50 rounded-md hover:bg-red-100"
+                title="Clear all children"
+              >
+                <Trash size={16} />
+                Clear All
+              </button>
+            )
+          )}
+          <button
+            onClick={onAdd}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
+            <UserPlus size={16} />
+            Add Child
+          </button>
+        </div>
       </div>
 
       {children.length === 0 ? (
@@ -70,9 +108,12 @@ export function ChildList({ children, onEdit, onRemove, onAdd }: ChildListProps)
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {sortedChildren.map(child => {
+              {sortedChildren.map((child, index) => {
                 const ageGroup = getAgeGroup(child.dateOfBirth);
                 const groupConfig = ageGroup ? getAgeGroupConfig(ageGroup) : null;
+                const displayName = (child.firstName || child.lastName)
+                  ? `${child.firstName} ${child.lastName}`.trim()
+                  : `Child ${index + 1}`;
 
                 return (
                   <tr key={child.id} className="hover:bg-gray-50">
@@ -86,7 +127,7 @@ export function ChildList({ children, onEdit, onRemove, onAdd }: ChildListProps)
                         }}
                         className="font-medium text-blue-600 hover:text-blue-800 hover:underline text-left text-sm"
                       >
-                        {child.firstName} {child.lastName}
+                        {displayName}
                       </button>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-gray-600 text-sm">

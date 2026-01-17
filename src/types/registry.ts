@@ -62,6 +62,9 @@ export interface Vacancy {
   full_time_available: boolean;
   part_time_available: boolean;
 
+  // Waitlist
+  waitlist_available: boolean;
+
   // Additional Info
   notes?: string;
 
@@ -82,6 +85,7 @@ export interface PublicListing {
   // Contact
   phone?: string;
   contact_email: string;
+  website?: string;
 
   // Program Info
   program_type: 'small_family' | 'large_family';
@@ -102,6 +106,8 @@ export interface PublicListing {
 
   full_time_available: boolean;
   part_time_available: boolean;
+  waitlist_available: boolean;
+  notes?: string;
 
   available_date: string;
   last_updated: string;

@@ -7,9 +7,15 @@ import { checkElfaStatus } from './elfa';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+console.log('[Supabase] Initializing...', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING',
+});
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Supabase credentials not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env'
+  console.error(
+    '[Supabase] CRITICAL: Credentials not configured! Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env'
   );
 }
 
@@ -59,17 +65,29 @@ export function onAuthStateChange(callback: (event: string, session: unknown) =>
 
 // Provider operations
 export async function getProvider(userId: string): Promise<Provider | null> {
-  const { data, error } = await supabase
-    .from('providers')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  console.log('[Supabase] getProvider called for:', userId);
+  try {
+    const { data, error } = await supabase
+      .from('providers')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-  if (error) {
-    console.error('Error fetching provider:', error);
+    if (error) {
+      // PGRST116 means no rows found - this is expected for new users
+      if (error.code === 'PGRST116') {
+        console.log('[Supabase] getProvider: No provider found (new user)');
+        return null;
+      }
+      console.error('[Supabase] getProvider error:', error);
+      return null;
+    }
+    console.log('[Supabase] getProvider success:', data?.business_name);
+    return data;
+  } catch (err) {
+    console.error('[Supabase] getProvider exception:', err);
     return null;
   }
-  return data;
 }
 
 export async function createProvider(userId: string, providerData: ProviderFormData): Promise<{ error?: string }> {
@@ -167,6 +185,7 @@ export async function upsertVacancy(providerId: string, vacancyData: VacancyForm
       available_date: vacancyData.available_date,
       full_time_available: vacancyData.full_time_available,
       part_time_available: vacancyData.part_time_available,
+      waitlist_available: vacancyData.waitlist_available,
       notes: vacancyData.notes || null,
       updated_at: now,
       expires_at: expiresAt.toISOString(),
@@ -183,17 +202,24 @@ export async function upsertVacancy(providerId: string, vacancyData: VacancyForm
 
 // Public listings
 export async function getPublicListings(): Promise<PublicListing[]> {
-  const { data, error } = await supabase
-    .from('public_listings')
-    .select('*')
-    .gt('expires_at', new Date().toISOString())
-    .order('last_updated', { ascending: false });
+  console.log('[Supabase] getPublicListings called');
+  try {
+    const { data, error } = await supabase
+      .from('public_listings')
+      .select('*')
+      .gt('expires_at', new Date().toISOString())
+      .order('last_updated', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching public listings:', error);
+    if (error) {
+      console.error('[Supabase] getPublicListings error:', error);
+      return [];
+    }
+    console.log('[Supabase] getPublicListings success, count:', data?.length || 0);
+    return data || [];
+  } catch (err) {
+    console.error('[Supabase] getPublicListings exception:', err);
     return [];
   }
-  return data || [];
 }
 
 // Re-export ELFA check for external use

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 150">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="150" fill="url(#bgGrad)" rx="8"/>
+
+  <!-- House icon -->
+  <g transform="translate(40, 35)">
+    <path d="M40 10 L10 35 L10 70 L70 70 L70 35 Z" fill="white" opacity="0.9"/>
+    <rect x="28" y="45" width="24" height="25" fill="#2563eb"/>
+    <circle cx="40" cy="25" r="8" fill="#fbbf24"/>
+  </g>
+
+  <!-- Children figures -->
+  <g transform="translate(85, 55)">
+    <circle cx="10" cy="8" r="6" fill="white" opacity="0.8"/>
+    <rect x="5" y="16" width="10" height="20" rx="3" fill="white" opacity="0.8"/>
+  </g>
+  <g transform="translate(100, 60)">
+    <circle cx="10" cy="8" r="5" fill="white" opacity="0.7"/>
+    <rect x="6" y="15" width="8" height="16" rx="2" fill="white" opacity="0.7"/>
+  </g>
+
+  <!-- Text -->
+  <text x="150" y="70" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">
+    SF Family Child Care
+  </text>
+  <text x="150" y="105" font-family="Arial, sans-serif" font-size="24" fill="white" opacity="0.9">
+    Vacancy Registry
+  </text>
+
+  <!-- Beta badge -->
+  <rect x="720" y="55" width="60" height="28" rx="14" fill="#fbbf24"/>
+  <text x="750" y="75" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e3a5f" text-anchor="middle">
+    BETA
+  </text>
+</svg>

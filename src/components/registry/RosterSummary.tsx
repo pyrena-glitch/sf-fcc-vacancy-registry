@@ -2,6 +2,7 @@ import { Child, CapacityConfig } from '../../types';
 import { calculateProjectedOpenings } from '../../utils/projections';
 import { Users, TrendingUp, Wand2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface RosterSummaryProps {
   children: Child[];
@@ -31,6 +32,7 @@ function getDetailedAgeGroup(dob: string): 'infant' | 'toddler' | 'preschool' | 
 }
 
 export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSummaryProps) {
+  const { t } = useLanguage();
   const projections = calculateProjectedOpenings(children, 6);
 
   // Count children by detailed age groups
@@ -101,13 +103,13 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
             <Users size={24} className="text-purple-600" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Current Roster Status</h2>
-            <p className="text-sm text-gray-500">Based on your enrolled children</p>
+            <h2 className="text-lg font-bold text-gray-900">{t('rosterSummary.title')}</h2>
+            <p className="text-sm text-gray-500">{t('rosterSummary.subtitle')}</p>
           </div>
         </div>
         {children.length === 0 && (
           <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-            No children in roster
+            {t('rosterSummary.noChildren')}
           </span>
         )}
       </div>
@@ -116,17 +118,17 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="p-3 bg-gray-50 rounded-lg text-center">
           <p className="text-2xl font-bold text-gray-900">{totalEnrolled}</p>
-          <p className="text-xs text-gray-500">Enrolled</p>
+          <p className="text-xs text-gray-500">{t('rosterSummary.enrolled')}</p>
         </div>
         <div className="p-3 bg-gray-50 rounded-lg text-center">
           <p className="text-2xl font-bold text-gray-900">{totalCapacity}</p>
-          <p className="text-xs text-gray-500">Capacity</p>
+          <p className="text-xs text-gray-500">{t('rosterSummary.capacity')}</p>
         </div>
         <div className={`p-3 rounded-lg text-center ${totalAvailable > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
           <p className={`text-2xl font-bold ${totalAvailable > 0 ? 'text-green-600' : 'text-gray-400'}`}>
             {totalAvailable}
           </p>
-          <p className="text-xs text-gray-500">Available</p>
+          <p className="text-xs text-gray-500">{t('rosterSummary.available')}</p>
         </div>
       </div>
 
@@ -134,30 +136,30 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
       <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="p-2 bg-pink-50 rounded-lg text-center border border-pink-200">
           <p className="text-lg font-bold text-pink-700">{ageCounts.infant}</p>
-          <p className="text-xs text-pink-600">Infant</p>
-          <p className="text-xs text-pink-400">Under 2</p>
+          <p className="text-xs text-pink-600">{t('vacancy.infant')}</p>
+          <p className="text-xs text-pink-400">{t('vacancy.infantAge')}</p>
         </div>
         <div className="p-2 bg-orange-50 rounded-lg text-center border border-orange-200">
           <p className="text-lg font-bold text-orange-700">{ageCounts.toddler}</p>
-          <p className="text-xs text-orange-600">Toddler</p>
-          <p className="text-xs text-orange-400">2-3 yrs</p>
+          <p className="text-xs text-orange-600">{t('vacancy.toddler')}</p>
+          <p className="text-xs text-orange-400">{t('vacancy.toddlerAge')}</p>
         </div>
         <div className="p-2 bg-green-50 rounded-lg text-center border border-green-200">
           <p className="text-lg font-bold text-green-700">{ageCounts.preschool}</p>
-          <p className="text-xs text-green-600">Preschool</p>
-          <p className="text-xs text-green-400">3-5 yrs</p>
+          <p className="text-xs text-green-600">{t('vacancy.preschool')}</p>
+          <p className="text-xs text-green-400">{t('vacancy.preschoolAge')}</p>
         </div>
         <div className="p-2 bg-blue-50 rounded-lg text-center border border-blue-200">
           <p className="text-lg font-bold text-blue-700">{ageCounts.school_age}</p>
-          <p className="text-xs text-blue-600">School Age</p>
-          <p className="text-xs text-blue-400">6+ yrs</p>
+          <p className="text-xs text-blue-600">{t('vacancy.schoolAge')}</p>
+          <p className="text-xs text-blue-400">{t('vacancy.schoolAgeAge')}</p>
         </div>
       </div>
 
       {/* Infant compliance note */}
       {infantAvailable > 0 && (
         <div className="text-xs text-pink-600 bg-pink-50 p-2 rounded mb-4">
-          <span className="font-medium">Infant spots available:</span> {infantAvailable} (per CA regulations)
+          <span className="font-medium">{t('rosterSummary.infantSpots')}:</span> {infantAvailable} ({t('rosterSummary.perRegulations')})
         </div>
       )}
 
@@ -166,7 +168,7 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
         <div className="border-t pt-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={16} className="text-blue-600" />
-            <span className="text-sm font-medium text-gray-700">Upcoming Openings (Next 6 Months)</span>
+            <span className="text-sm font-medium text-gray-700">{t('rosterSummary.upcomingOpenings')}</span>
           </div>
           <div className="space-y-1">
             {projections.slice(0, 3).map((p, i) => (
@@ -176,7 +178,7 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
               </div>
             ))}
             {projections.length > 3 && (
-              <p className="text-xs text-gray-400">+{projections.length - 3} more</p>
+              <p className="text-xs text-gray-400">{t('rosterSummary.moreOpenings', { count: projections.length - 3 })}</p>
             )}
           </div>
         </div>
@@ -196,12 +198,12 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
           >
             <Wand2 size={16} />
             {totalAvailable > 0
-              ? 'Auto-fill vacancy form from roster'
-              : 'No available spots to report'}
+              ? t('rosterSummary.autoFill')
+              : t('rosterSummary.noSpots')}
           </button>
           {totalAvailable > 0 && (
             <p className="text-xs text-gray-500 text-center mt-2">
-              This will update the form below based on your current roster
+              {t('rosterSummary.autoFillHelp')}
             </p>
           )}
         </div>
@@ -209,7 +211,7 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
 
       {children.length === 0 && (
         <div className="text-center py-2 text-gray-500 text-sm border-t mt-4 pt-4">
-          <p>Add children to your <strong>Roster</strong> to see capacity analysis</p>
+          <p>{t('rosterSummary.addChildrenHelp')}</p>
         </div>
       )}
     </div>

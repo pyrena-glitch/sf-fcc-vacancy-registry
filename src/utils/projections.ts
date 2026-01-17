@@ -35,8 +35,11 @@ export function calculateProjectedOpenings(
   const today = new Date();
   const projectionEnd = addMonths(today, projectionMonths);
 
-  for (const child of children) {
-    const childName = `${child.firstName} ${child.lastName}`;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    const childName = (child.firstName || child.lastName)
+      ? `${child.firstName} ${child.lastName}`.trim()
+      : `Child ${i + 1}`;
 
     // Check for scheduled departure
     if (child.expectedDepartureDate) {

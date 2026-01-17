@@ -48,23 +48,22 @@ export function ChildForm({ onSubmit, onCancel, initialData }: ChildFormProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name *
+                First Name <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
-                required
                 value={formData.firstName}
                 onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                placeholder="e.g., Child 1"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name *
+                Last Name <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
-                required
                 value={formData.lastName}
                 onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

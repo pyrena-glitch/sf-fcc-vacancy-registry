@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Provider } from '../../types/registry';
 import { LANGUAGES, SF_NEIGHBORHOODS } from '../../types/registry';
 import { Save, AlertCircle, CheckCircle, Shield, MapPin, Phone, Globe, FileCheck } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface ProviderSettingsProps {
   provider: Provider;
@@ -10,6 +11,7 @@ interface ProviderSettingsProps {
 }
 
 export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderSettingsProps) {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     license_number: provider.license_number,
     business_name: provider.business_name,
@@ -74,8 +76,8 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           <Shield size={24} className="text-gray-600" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Program Settings</h2>
-          <p className="text-sm text-gray-500">Update your program information</p>
+          <h2 className="text-lg font-bold text-gray-900">{t('settings.title')}</h2>
+          <p className="text-sm text-gray-500">{t('settings.subtitle')}</p>
         </div>
       </div>
 
@@ -85,11 +87,11 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           <div className="flex items-center justify-between mb-2">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <FileCheck size={16} />
-              FCC License Number
+              {t('onboarding.fccLicenseNumber')}
             </label>
             {provider.is_elfa_network && (
               <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
-                ELFA Network
+                {t('settings.elfaMember')}
               </span>
             )}
           </div>
@@ -108,12 +110,12 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
                 onClick={onReverifyElfa}
                 className="px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50"
               >
-                Re-verify ELFA
+                {t('settings.reverifyElfa')}
               </button>
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            9-digit CA Community Care Licensing number
+            {t('onboarding.licenseNumberHelp')}
           </p>
         </div>
 
@@ -121,7 +123,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Business Name *
+              {t('onboarding.businessName')} *
             </label>
             <input
               type="text"
@@ -133,7 +135,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Owner Name *
+              {t('onboarding.ownerName')} *
             </label>
             <input
               type="text"
@@ -148,7 +150,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
         {/* Program Type */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Program Type *
+            {t('onboarding.programType')} *
           </label>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -160,8 +162,8 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <p className="font-medium">Small Family</p>
-              <p className="text-xs text-gray-500">Up to 8 children</p>
+              <p className="font-medium">{t('onboarding.smallFamilyShort')}</p>
+              <p className="text-xs text-gray-500">{t('onboarding.upTo8')}</p>
             </button>
             <button
               type="button"
@@ -172,8 +174,8 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <p className="font-medium">Large Family</p>
-              <p className="text-xs text-gray-500">Up to 14 children</p>
+              <p className="font-medium">{t('onboarding.largeFamilyShort')}</p>
+              <p className="text-xs text-gray-500">{t('onboarding.upTo14')}</p>
             </button>
           </div>
         </div>
@@ -183,7 +185,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <MapPin size={14} className="inline mr-1" />
-              ZIP Code *
+              {t('onboarding.zipCode')} *
             </label>
             <input
               type="text"
@@ -196,14 +198,14 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Neighborhood
+              {t('onboarding.neighborhood')}
             </label>
             <select
               value={formData.neighborhood}
               onChange={e => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select...</option>
+              <option value="">{t('onboarding.selectNeighborhood')}</option>
               {SF_NEIGHBORHOODS.map(n => (
                 <option key={n} value={n}>{n}</option>
               ))}
@@ -216,7 +218,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Phone size={14} className="inline mr-1" />
-              Phone
+              {t('onboarding.phone')}
             </label>
             <input
               type="tel"
@@ -228,7 +230,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contact Email *
+              {t('onboarding.contactEmail')} *
             </label>
             <input
               type="email"
@@ -243,7 +245,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             <Globe size={14} className="inline mr-1" />
-            Website (optional)
+            {t('onboarding.website')}
           </label>
           <input
             type="url"
@@ -257,7 +259,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
         {/* Languages */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Languages Spoken
+            {t('onboarding.languages')}
           </label>
           <div className="flex flex-wrap gap-2">
             {LANGUAGES.map(lang => (
@@ -287,7 +289,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
         {success && (
           <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
             <CheckCircle size={16} />
-            <span>Settings saved successfully!</span>
+            <span>{t('settings.savedSuccess')}</span>
           </div>
         )}
 
@@ -297,7 +299,7 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
         >
           <Save size={18} />
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading ? t('common.saving') : t('settings.saveSettings')}
         </button>
       </form>
     </div>

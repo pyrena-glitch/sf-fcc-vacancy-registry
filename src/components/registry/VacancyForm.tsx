@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Baby, Clock, Calendar, Save, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Baby, Clock, Calendar, Save, AlertCircle, CheckCircle, AlertTriangle, ClipboardList } from 'lucide-react';
 import { getMaxInfantsAllowed } from '../../utils/compliance';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface VacancyFormProps {
   initialData?: VacancyFormData;
@@ -24,6 +25,7 @@ export interface VacancyFormData {
   available_date: string;
   full_time_available: boolean;
   part_time_available: boolean;
+  waitlist_available: boolean;
   notes: string;
 }
 
@@ -39,10 +41,12 @@ const DEFAULT_DATA: VacancyFormData = {
   available_date: new Date().toISOString().split('T')[0],
   full_time_available: true,
   part_time_available: false,
+  waitlist_available: false,
   notes: '',
 };
 
 export function VacancyForm({ initialData, onSubmit, programType, currentEnrollment }: VacancyFormProps) {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState<VacancyFormData>(initialData || DEFAULT_DATA);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,7 +77,12 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
     if (totalSpots > availableSpots) {
       return {
         type: 'error' as const,
-        message: `You have ${currentEnrollment.total} enrolled with ${maxCapacity} capacity. Only ${availableSpots} spots available, but reporting ${totalSpots}.`,
+        message: t('vacancy.complianceCapacityError', {
+          enrolled: currentEnrollment.total,
+          capacity: maxCapacity,
+          available: availableSpots,
+          reporting: totalSpots,
+        }),
       };
     }
 
@@ -81,7 +90,12 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
     if (formData.infant_spots > infantSpotsAvailable) {
       return {
         type: 'warning' as const,
-        message: `Infant limit: With ${currentEnrollment.total} children (${currentEnrollment.infants} infants), you can accept ${infantSpotsAvailable} more infants. You're reporting ${formData.infant_spots}.`,
+        message: t('vacancy.complianceInfantWarning', {
+          total: currentEnrollment.total,
+          infants: currentEnrollment.infants,
+          allowed: infantSpotsAvailable,
+          reporting: formData.infant_spots,
+        }),
       };
     }
 
@@ -91,16 +105,6 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
   const handleSpotChange = (field: keyof VacancyFormData, value: number) => {
     const newValue = Math.max(0, value);
     setFormData(prev => ({ ...prev, [field]: newValue }));
-
-    // Auto-enable accepting if spots > 0
-    const acceptingField = field.replace('_spots', '');
-    if (newValue > 0) {
-      setFormData(prev => ({
-        ...prev,
-        [field]: newValue,
-        [`accepting_${acceptingField}s` as keyof VacancyFormData]: true,
-      }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,14 +112,17 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
     setError('');
     setSuccess(false);
 
-    if (totalSpots === 0 && !formData.accepting_infants && !formData.accepting_toddlers &&
-        !formData.accepting_preschool && !formData.accepting_school_age) {
-      setError('Please indicate at least one opening or age group you are accepting');
-      return;
-    }
+    // Auto-set accepting flags based on spots > 0
+    const dataToSubmit: VacancyFormData = {
+      ...formData,
+      accepting_infants: formData.infant_spots > 0,
+      accepting_toddlers: formData.toddler_spots > 0,
+      accepting_preschool: formData.preschool_spots > 0,
+      accepting_school_age: formData.school_age_spots > 0,
+    };
 
     setLoading(true);
-    const result = await onSubmit(formData);
+    const result = await onSubmit(dataToSubmit);
     setLoading(false);
 
     if (result.error) {
@@ -133,8 +140,8 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
           <Baby size={24} className="text-blue-600" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Report Vacancies</h2>
-          <p className="text-sm text-gray-500">Update your current openings</p>
+          <h2 className="text-lg font-bold text-gray-900">{t('vacancy.title')}</h2>
+          <p className="text-sm text-gray-500">{t('vacancy.subtitle')}</p>
         </div>
       </div>
 
@@ -142,14 +149,14 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
         {/* Age Group Spots */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">
-            Available Spots by Age Group
+            {t('vacancy.availableSpotsByAge')}
           </label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* Infant */}
             <div className="p-4 border border-pink-200 rounded-lg bg-pink-50">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-sm font-medium text-pink-700">Infant</span>
-                <span className="text-xs text-pink-500">Under 2</span>
+                <span className="text-sm font-medium text-pink-700">{t('vacancy.infant')}</span>
+                <span className="text-xs text-pink-500">{t('vacancy.infantAge')}</span>
               </div>
               <input
                 type="number"
@@ -159,22 +166,13 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
                 onChange={e => handleSpotChange('infant_spots', parseInt(e.target.value) || 0)}
                 className="w-full px-3 py-2 border border-pink-300 rounded-lg text-center text-lg font-bold"
               />
-              <label className="flex items-center gap-2 mt-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={formData.accepting_infants}
-                  onChange={e => setFormData(prev => ({ ...prev, accepting_infants: e.target.checked }))}
-                  className="rounded"
-                />
-                <span>Accepting</span>
-              </label>
             </div>
 
             {/* Toddler */}
             <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-sm font-medium text-orange-700">Toddler</span>
-                <span className="text-xs text-orange-500">2-3 yrs</span>
+                <span className="text-sm font-medium text-orange-700">{t('vacancy.toddler')}</span>
+                <span className="text-xs text-orange-500">{t('vacancy.toddlerAge')}</span>
               </div>
               <input
                 type="number"
@@ -184,22 +182,13 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
                 onChange={e => handleSpotChange('toddler_spots', parseInt(e.target.value) || 0)}
                 className="w-full px-3 py-2 border border-orange-300 rounded-lg text-center text-lg font-bold"
               />
-              <label className="flex items-center gap-2 mt-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={formData.accepting_toddlers}
-                  onChange={e => setFormData(prev => ({ ...prev, accepting_toddlers: e.target.checked }))}
-                  className="rounded"
-                />
-                <span>Accepting</span>
-              </label>
             </div>
 
             {/* Preschool */}
             <div className="p-4 border border-green-200 rounded-lg bg-green-50">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-sm font-medium text-green-700">Preschool</span>
-                <span className="text-xs text-green-500">3-5 yrs</span>
+                <span className="text-sm font-medium text-green-700">{t('vacancy.preschool')}</span>
+                <span className="text-xs text-green-500">{t('vacancy.preschoolAge')}</span>
               </div>
               <input
                 type="number"
@@ -209,22 +198,13 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
                 onChange={e => handleSpotChange('preschool_spots', parseInt(e.target.value) || 0)}
                 className="w-full px-3 py-2 border border-green-300 rounded-lg text-center text-lg font-bold"
               />
-              <label className="flex items-center gap-2 mt-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={formData.accepting_preschool}
-                  onChange={e => setFormData(prev => ({ ...prev, accepting_preschool: e.target.checked }))}
-                  className="rounded"
-                />
-                <span>Accepting</span>
-              </label>
             </div>
 
             {/* School Age */}
             <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-sm font-medium text-blue-700">School Age</span>
-                <span className="text-xs text-blue-500">6+ yrs</span>
+                <span className="text-sm font-medium text-blue-700">{t('vacancy.schoolAge')}</span>
+                <span className="text-xs text-blue-500">{t('vacancy.schoolAgeAge')}</span>
               </div>
               <input
                 type="number"
@@ -234,20 +214,15 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
                 onChange={e => handleSpotChange('school_age_spots', parseInt(e.target.value) || 0)}
                 className="w-full px-3 py-2 border border-blue-300 rounded-lg text-center text-lg font-bold"
               />
-              <label className="flex items-center gap-2 mt-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={formData.accepting_school_age}
-                  onChange={e => setFormData(prev => ({ ...prev, accepting_school_age: e.target.checked }))}
-                  className="rounded"
-                />
-                <span>Accepting</span>
-              </label>
             </div>
           </div>
 
           <p className="text-sm text-gray-500 mt-2">
-            Total spots reported: <strong>{totalSpots}</strong>
+            {totalSpots === 0 ? (
+              <span className="text-amber-600">{t('vacancy.reportingAsFull')}</span>
+            ) : (
+              <>{t('vacancy.totalSpotsReported')}: <strong>{totalSpots}</strong></>
+            )}
           </p>
 
           {complianceWarning && (
@@ -258,7 +233,7 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
             }`}>
               <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
               <div className="text-sm">
-                <strong>{complianceWarning.type === 'error' ? 'Violation' : 'Warning'}:</strong>{' '}
+                <strong>{complianceWarning.type === 'error' ? t('vacancy.violation') : t('vacancy.warning')}:</strong>{' '}
                 {complianceWarning.message}
               </div>
             </div>
@@ -269,7 +244,7 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Calendar size={14} className="inline mr-1" />
-            When are spots available?
+            {t('vacancy.whenAvailable')}
           </label>
           <input
             type="date"
@@ -283,7 +258,7 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Clock size={14} className="inline mr-1" />
-            Schedule Options
+            {t('vacancy.scheduleOptions')}
           </label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2">
@@ -293,7 +268,7 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
                 onChange={e => setFormData(prev => ({ ...prev, full_time_available: e.target.checked }))}
                 className="rounded"
               />
-              <span className="text-sm">Full-time</span>
+              <span className="text-sm">{t('vacancy.fullTime')}</span>
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -302,21 +277,38 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
                 onChange={e => setFormData(prev => ({ ...prev, part_time_available: e.target.checked }))}
                 className="rounded"
               />
-              <span className="text-sm">Part-time</span>
+              <span className="text-sm">{t('vacancy.partTime')}</span>
             </label>
           </div>
+        </div>
+
+        {/* Waitlist */}
+        <div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.waitlist_available}
+              onChange={e => setFormData(prev => ({ ...prev, waitlist_available: e.target.checked }))}
+              className="rounded"
+            />
+            <ClipboardList size={14} className="text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">{t('vacancy.waitlistAvailable')}</span>
+          </label>
+          <p className="text-xs text-gray-500 mt-1 ml-6">
+            {t('vacancy.waitlistHelp')}
+          </p>
         </div>
 
         {/* Notes */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Additional Notes (optional)
+            {t('vacancy.additionalNotes')}
           </label>
           <textarea
             value={formData.notes}
             onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             rows={3}
-            placeholder="Any special information for families..."
+            placeholder={t('vacancy.notesPlaceholder')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -331,7 +323,7 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
         {success && (
           <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
             <CheckCircle size={16} />
-            <span>Vacancy information updated successfully!</span>
+            <span>{t('vacancy.successMessage')}</span>
           </div>
         )}
 
@@ -341,13 +333,13 @@ export function VacancyForm({ initialData, onSubmit, programType, currentEnrollm
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
         >
           <Save size={18} />
-          {loading ? 'Saving...' : 'Update Vacancies'}
+          {loading ? t('common.saving') : t('vacancy.updateVacancies')}
         </button>
 
         <p className="text-xs text-gray-500 text-center">
-          Your listing will be visible to families searching for childcare.
+          {t('vacancy.visibilityNote')}
           <br />
-          Please keep this updated to help families find accurate information.
+          {t('vacancy.keepUpdatedNote')}
         </p>
       </form>
     </div>

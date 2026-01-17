@@ -12,8 +12,11 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Globe,
+  ClipboardList,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PublicListingsProps {
   listings: PublicListing[];
@@ -21,11 +24,14 @@ interface PublicListingsProps {
 }
 
 export function PublicListings({ listings, loading }: PublicListingsProps) {
+  const { t } = useLanguage();
   const [filters, setFilters] = useState<SearchFilters>({});
   const [showFilters, setShowFilters] = useState(false);
   const [expandedListing, setExpandedListing] = useState<string | null>(null);
+  const [showWaitlistSection, setShowWaitlistSection] = useState(false);
 
-  const filteredListings = listings.filter(listing => {
+  // Apply filters to all listings first
+  const applyFilters = (listing: PublicListing) => {
     if (filters.zip_code && !listing.zip_code.startsWith(filters.zip_code)) {
       return false;
     }
@@ -66,7 +72,12 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
       return false;
     }
     return true;
-  });
+  };
+
+  // Separate listings: with openings vs full with waitlist
+  const allFiltered = listings.filter(applyFilters);
+  const listingsWithOpenings = allFiltered.filter(l => l.total_spots_available > 0);
+  const fullWithWaitlist = allFiltered.filter(l => l.total_spots_available === 0 && l.waitlist_available);
 
   const clearFilters = () => {
     setFilters({});
@@ -82,15 +93,15 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                SF Family Child Care Vacancies
+                {t('publicListings.title')}
               </h1>
               <p className="text-gray-600 text-sm">
-                Find available childcare spots in San Francisco
+                {t('publicListings.subtitle')}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-blue-600">{filteredListings.length}</p>
-              <p className="text-sm text-gray-500">programs with openings</p>
+              <p className="text-2xl font-bold text-blue-600">{listingsWithOpenings.length}</p>
+              <p className="text-sm text-gray-500">{t('publicListings.programsWithOpenings')}</p>
             </div>
           </div>
 
@@ -100,7 +111,7 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by ZIP code (e.g., 94110)"
+                placeholder={t('publicListings.searchPlaceholder')}
                 value={filters.zip_code || ''}
                 onChange={e => setFilters(prev => ({ ...prev, zip_code: e.target.value }))}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -115,7 +126,7 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
               }`}
             >
               <Filter size={18} />
-              Filters
+              {t('common.filters')}
               {hasActiveFilters && (
                 <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
                   {Object.values(filters).filter(v => v).length}
@@ -128,14 +139,14 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
           {showFilters && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-medium text-gray-900">Filter Results</h3>
+                <h3 className="font-medium text-gray-900">{t('publicListings.filterResults')}</h3>
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
                     className="text-sm text-blue-600 hover:underline flex items-center gap-1"
                   >
                     <X size={14} />
-                    Clear all
+                    {t('common.clearAll')}
                   </button>
                 )}
               </div>
@@ -144,14 +155,14 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                 {/* Neighborhood */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Neighborhood
+                    {t('publicListings.neighborhood')}
                   </label>
                   <select
                     value={filters.neighborhood || ''}
                     onChange={e => setFilters(prev => ({ ...prev, neighborhood: e.target.value || undefined }))}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
                   >
-                    <option value="">Any</option>
+                    <option value="">{t('common.any')}</option>
                     {SF_NEIGHBORHOODS.map(n => (
                       <option key={n} value={n}>{n}</option>
                     ))}
@@ -161,7 +172,7 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                 {/* Age Group */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Age Group
+                    {t('publicListings.ageGroup')}
                   </label>
                   <select
                     value={filters.age_group || ''}
@@ -171,25 +182,25 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                     }))}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
                   >
-                    <option value="">Any age</option>
-                    <option value="infant">Infant (under 2)</option>
-                    <option value="toddler">Toddler (2-3)</option>
-                    <option value="preschool">Preschool (3-5)</option>
-                    <option value="school_age">School Age (6+)</option>
+                    <option value="">{t('publicListings.anyAge')}</option>
+                    <option value="infant">{t('vacancy.infant')} ({t('vacancy.infantAge')})</option>
+                    <option value="toddler">{t('vacancy.toddler')} ({t('vacancy.toddlerAge')})</option>
+                    <option value="preschool">{t('vacancy.preschool')} ({t('vacancy.preschoolAge')})</option>
+                    <option value="school_age">{t('vacancy.schoolAge')} ({t('vacancy.schoolAgeAge')})</option>
                   </select>
                 </div>
 
                 {/* Language */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Language
+                    {t('publicListings.language')}
                   </label>
                   <select
                     value={filters.language || ''}
                     onChange={e => setFilters(prev => ({ ...prev, language: e.target.value || undefined }))}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
                   >
-                    <option value="">Any</option>
+                    <option value="">{t('common.any')}</option>
                     {LANGUAGES.map(l => (
                       <option key={l} value={l}>{l}</option>
                     ))}
@@ -199,7 +210,7 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                 {/* Schedule */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Schedule
+                    {t('publicListings.schedule')}
                   </label>
                   <select
                     value={filters.schedule || ''}
@@ -209,16 +220,16 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                     }))}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
                   >
-                    <option value="">Any</option>
-                    <option value="full_time">Full-time</option>
-                    <option value="part_time">Part-time</option>
+                    <option value="">{t('common.any')}</option>
+                    <option value="full_time">{t('vacancy.fullTime')}</option>
+                    <option value="part_time">{t('vacancy.partTime')}</option>
                   </select>
                 </div>
 
                 {/* ELFA */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    ELFA Network
+                    {t('publicListings.elfaNetwork')}
                   </label>
                   <label className="flex items-center gap-2 mt-1">
                     <input
@@ -227,7 +238,7 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                       onChange={e => setFilters(prev => ({ ...prev, elfa_only: e.target.checked || undefined }))}
                       className="rounded"
                     />
-                    <span className="text-sm">Only ELFA programs</span>
+                    <span className="text-sm">{t('publicListings.onlyElfa')}</span>
                   </label>
                 </div>
               </div>
@@ -241,25 +252,25 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
-            <p className="text-gray-600">Loading listings...</p>
+            <p className="text-gray-600">{t('common.loading')}</p>
           </div>
-        ) : filteredListings.length === 0 ? (
+        ) : listingsWithOpenings.length === 0 && fullWithWaitlist.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl shadow">
             <Baby size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No matches found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your filters or search</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('publicListings.noMatches')}</h3>
+            <p className="text-gray-600 mb-4">{t('publicListings.noMatchesHelp')}</p>
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
                 className="text-blue-600 hover:underline"
               >
-                Clear all filters
+                {t('common.clearAll')}
               </button>
             )}
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredListings.map(listing => (
+            {listingsWithOpenings.map(listing => (
               <div
                 key={listing.provider_id}
                 className="bg-white rounded-xl shadow hover:shadow-md transition-shadow"
@@ -287,10 +298,10 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                           {listing.neighborhood || listing.zip_code}
                         </span>
                         <span>
-                          {listing.program_type === 'small_family' ? 'Small' : 'Large'} Family
+                          {listing.program_type === 'small_family' ? t('publicListings.smallFamily') : t('publicListings.largeFamily')}
                         </span>
                         <span className="text-gray-400">
-                          License #{listing.license_number}
+                          {t('publicListings.license')} #{listing.license_number}
                         </span>
                       </div>
                     </div>
@@ -300,7 +311,7 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                         <p className="text-2xl font-bold text-green-600">
                           {listing.total_spots_available}
                         </p>
-                        <p className="text-xs text-gray-500">spots open</p>
+                        <p className="text-xs text-gray-500">{t('publicListings.spotsOpen')}</p>
                       </div>
                       {expandedListing === listing.provider_id ? (
                         <ChevronUp size={20} className="text-gray-400" />
@@ -311,25 +322,25 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                   </div>
 
                   {/* Quick spots overview */}
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3 flex-wrap">
                     {listing.accepting_infants && (
                       <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs rounded">
-                        Infant{listing.infant_spots > 0 && ` (${listing.infant_spots})`}
+                        {t('vacancy.infant')}{listing.infant_spots > 0 && ` (${listing.infant_spots})`}
                       </span>
                     )}
                     {listing.accepting_toddlers && (
                       <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">
-                        Toddler{listing.toddler_spots > 0 && ` (${listing.toddler_spots})`}
+                        {t('vacancy.toddler')}{listing.toddler_spots > 0 && ` (${listing.toddler_spots})`}
                       </span>
                     )}
                     {listing.accepting_preschool && (
                       <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                        Preschool{listing.preschool_spots > 0 && ` (${listing.preschool_spots})`}
+                        {t('vacancy.preschool')}{listing.preschool_spots > 0 && ` (${listing.preschool_spots})`}
                       </span>
                     )}
                     {listing.accepting_school_age && (
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                        School Age{listing.school_age_spots > 0 && ` (${listing.school_age_spots})`}
+                        {t('vacancy.schoolAge')}{listing.school_age_spots > 0 && ` (${listing.school_age_spots})`}
                       </span>
                     )}
                   </div>
@@ -340,7 +351,7 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                   <div className="px-4 pb-4 pt-2 border-t">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Contact</h4>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">{t('publicListings.contact')}</h4>
                         <div className="space-y-2 text-sm">
                           {listing.phone && (
                             <a
@@ -358,33 +369,205 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
                             <Mail size={14} />
                             {listing.contact_email}
                           </a>
+                          {listing.website && (
+                            <a
+                              href={listing.website.startsWith('http') ? listing.website : `https://${listing.website}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-blue-600 hover:underline"
+                            >
+                              <Globe size={14} />
+                              {t('publicListings.visitWebsite')}
+                            </a>
+                          )}
                         </div>
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">{t('publicListings.details')}</h4>
                         <div className="space-y-1 text-sm text-gray-600">
                           <p className="flex items-center gap-2">
                             <Clock size={14} />
                             {[
-                              listing.full_time_available && 'Full-time',
-                              listing.part_time_available && 'Part-time'
-                            ].filter(Boolean).join(', ') || 'Contact for schedule'}
+                              listing.full_time_available && t('vacancy.fullTime'),
+                              listing.part_time_available && t('vacancy.partTime')
+                            ].filter(Boolean).join(', ') || t('publicListings.contactForSchedule')}
                           </p>
                           {listing.languages.length > 0 && (
-                            <p>Languages: {listing.languages.join(', ')}</p>
+                            <p>{t('publicListings.languagesSpoken')}: {listing.languages.join(', ')}</p>
                           )}
                         </div>
                       </div>
                     </div>
 
+                    {listing.notes && (
+                      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-blue-800">{listing.notes}</p>
+                      </div>
+                    )}
+
                     <p className="text-xs text-gray-400 mt-4">
-                      Last updated {formatDistanceToNow(new Date(listing.last_updated), { addSuffix: true })}
+                      {t('publicListings.lastUpdated')} {formatDistanceToNow(new Date(listing.last_updated), { addSuffix: true })}
                     </p>
                   </div>
                 )}
               </div>
             ))}
+
+            {/* Collapsed section for full programs with waitlist */}
+            {fullWithWaitlist.length > 0 && (
+              <div className="mt-8">
+                <button
+                  onClick={() => setShowWaitlistSection(!showWaitlistSection)}
+                  className="w-full flex items-center justify-between p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <ClipboardList size={18} />
+                    <span className="font-medium">
+                      {t('publicListings.currentlyFull')} ({fullWithWaitlist.length})
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      — {t('publicListings.waitlistAvailable')}
+                    </span>
+                  </div>
+                  {showWaitlistSection ? (
+                    <ChevronUp size={20} className="text-gray-400" />
+                  ) : (
+                    <ChevronDown size={20} className="text-gray-400" />
+                  )}
+                </button>
+
+                {showWaitlistSection && (
+                  <div className="mt-4 space-y-4">
+                    {fullWithWaitlist.map(listing => (
+                      <div
+                        key={listing.provider_id}
+                        className="bg-white rounded-xl shadow border-l-4 border-amber-400"
+                      >
+                        <div
+                          className="p-4 cursor-pointer"
+                          onClick={() => setExpandedListing(
+                            expandedListing === listing.provider_id ? null : listing.provider_id
+                          )}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-gray-900">{listing.business_name}</h3>
+                                {listing.is_elfa_network && (
+                                  <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+                                    <Star size={12} />
+                                    ELFA
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                                  <ClipboardList size={12} />
+                                  {t('publicListings.waitlist')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 text-sm text-gray-600 flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <MapPin size={14} />
+                                  {listing.neighborhood || listing.zip_code}
+                                </span>
+                                <span>
+                                  {listing.program_type === 'small_family' ? t('publicListings.smallFamily') : t('publicListings.largeFamily')}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right flex items-center gap-4">
+                              <div>
+                                <p className="text-lg font-medium text-amber-600">
+                                  {t('publicListings.full')}
+                                </p>
+                                <p className="text-xs text-gray-500">{t('publicListings.joinWaitlist')}</p>
+                              </div>
+                              {expandedListing === listing.provider_id ? (
+                                <ChevronUp size={20} className="text-gray-400" />
+                              ) : (
+                                <ChevronDown size={20} className="text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded Details */}
+                        {expandedListing === listing.provider_id && (
+                          <div className="px-4 pb-4 pt-2 border-t">
+                            <div className="bg-amber-50 p-3 rounded-lg mb-4">
+                              <p className="text-sm text-amber-800">
+                                {t('publicListings.waitlistInfo')}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('publicListings.contact')}</h4>
+                                <div className="space-y-2 text-sm">
+                                  {listing.phone && (
+                                    <a
+                                      href={`tel:${listing.phone}`}
+                                      className="flex items-center gap-2 text-blue-600 hover:underline"
+                                    >
+                                      <Phone size={14} />
+                                      {listing.phone}
+                                    </a>
+                                  )}
+                                  <a
+                                    href={`mailto:${listing.contact_email}`}
+                                    className="flex items-center gap-2 text-blue-600 hover:underline"
+                                  >
+                                    <Mail size={14} />
+                                    {listing.contact_email}
+                                  </a>
+                                  {listing.website && (
+                                    <a
+                                      href={listing.website.startsWith('http') ? listing.website : `https://${listing.website}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 text-blue-600 hover:underline"
+                                    >
+                                      <Globe size={14} />
+                                      {t('publicListings.visitWebsite')}
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('publicListings.details')}</h4>
+                                <div className="space-y-1 text-sm text-gray-600">
+                                  <p className="flex items-center gap-2">
+                                    <Clock size={14} />
+                                    {[
+                                      listing.full_time_available && t('vacancy.fullTime'),
+                                      listing.part_time_available && t('vacancy.partTime')
+                                    ].filter(Boolean).join(', ') || t('publicListings.contactForSchedule')}
+                                  </p>
+                                  {listing.languages.length > 0 && (
+                                    <p>{t('publicListings.languagesSpoken')}: {listing.languages.join(', ')}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {listing.notes && (
+                              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                <p className="text-sm text-blue-800">{listing.notes}</p>
+                              </div>
+                            )}
+
+                            <p className="text-xs text-gray-400 mt-4">
+                              {t('publicListings.lastUpdated')} {formatDistanceToNow(new Date(listing.last_updated), { addSuffix: true })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -393,13 +576,16 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
       <div className="bg-white border-t mt-8 py-6">
         <div className="max-w-6xl mx-auto px-4 text-center text-sm text-gray-600">
           <p>
-            A service of the San Francisco Family Child Care Association
+            {t('publicListings.footer')}
           </p>
           <p className="mt-1">
-            Are you a licensed FCC provider?{' '}
+            {t('publicListings.areYouProvider')}{' '}
             <a href="#" className="text-blue-600 hover:underline">
-              Report your vacancies
+              {t('publicListings.reportVacancies')}
             </a>
+          </p>
+          <p className="mt-2 text-xs text-gray-400">
+            v{__APP_VERSION__}
           </p>
         </div>
       </div>

@@ -87,8 +87,6 @@ function parseCsv(content: string): ParsedRow[] {
       lastName = nameParts.slice(1).join(' ') || '';
     }
 
-    if (!firstName) errors.push('Missing first name');
-
     const dobRaw = dobIdx >= 0 ? values[dobIdx] : '';
     const dateOfBirth = parseDate(dobRaw);
     if (!dateOfBirth) errors.push('Invalid date of birth');

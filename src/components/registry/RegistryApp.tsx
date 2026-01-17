@@ -39,6 +39,7 @@ export function RegistryApp() {
   const [vacancyData, setVacancyData] = useState<VacancyFormData | undefined>();
   const [publicListings, setPublicListings] = useState<PublicListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   const [listingsLoading, setListingsLoading] = useState(true);
 
   // Roster management state
@@ -117,24 +118,85 @@ export function RegistryApp() {
     setShowImport(false);
   };
 
+  const clearChildren = () => {
+    if (!user) return;
+    setChildren([]);
+    saveChildren(user.id, []);
+  };
+
   // Check auth state on mount
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let isInitialLoad = true;
+    let isMounted = true;
+
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await loadProviderData(session.user.id);
+      console.log('[Auth] Starting auth check...');
+
+      // Set a timeout to prevent infinite loading
+      timeoutId = setTimeout(() => {
+        if (isMounted && loading) {
+          console.error('[Auth] Timeout - auth check took too long');
+          setLoadingError('Connection timeout. Please check your internet connection and refresh.');
+          setLoading(false);
+        }
+      }, 10000); // 10 second timeout
+
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('[Auth] getSession completed', { hasSession: !!session, error });
+
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('[Auth] getSession error:', error);
+          setLoadingError(`Auth error: ${error.message}`);
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+
+        if (session?.user) {
+          console.log('[Auth] User found:', session.user.email);
+          setUser(session.user);
+          await loadProviderData(session.user.id);
+        } else {
+          console.log('[Auth] No session found');
+        }
+      } catch (err) {
+        console.error('[Auth] Exception during auth check:', err);
+        if (isMounted) {
+          setLoadingError(`Connection error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      } finally {
+        if (isMounted) {
+          console.log('[Auth] Setting loading to false');
+          clearTimeout(timeoutId);
+          setLoading(false);
+          isInitialLoad = false;
+        }
       }
-      setLoading(false);
     };
 
     checkAuth();
 
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Subscribe to auth changes (but skip during initial load to avoid race condition)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth] Auth state changed:', event, { hasSession: !!session, isInitialLoad });
+
+      // Skip INITIAL_SESSION event as we handle it in checkAuth
+      if (event === 'INITIAL_SESSION') {
+        console.log('[Auth] Skipping INITIAL_SESSION (handled by checkAuth)');
+        return;
+      }
+
+      if (!isMounted) return;
+
       if (session?.user) {
         setUser(session.user);
-        await loadProviderData(session.user.id);
+        if (!isInitialLoad) {
+          await loadProviderData(session.user.id);
+        }
       } else {
         setUser(null);
         setProvider(null);
@@ -142,7 +204,11 @@ export function RegistryApp() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Load public listings
@@ -151,29 +217,42 @@ export function RegistryApp() {
   }, []);
 
   const loadProviderData = async (userId: string) => {
-    const providerData = await getProvider(userId);
-    if (providerData) {
-      setProvider(providerData);
-      loadChildren(userId);
-      const vacancy = await getVacancy(userId);
-      if (vacancy) {
-        setVacancyData({
-          infant_spots: vacancy.infant_spots,
-          toddler_spots: vacancy.toddler_spots,
-          preschool_spots: vacancy.preschool_spots,
-          school_age_spots: vacancy.school_age_spots,
-          accepting_infants: vacancy.accepting_infants,
-          accepting_toddlers: vacancy.accepting_toddlers,
-          accepting_preschool: vacancy.accepting_preschool,
-          accepting_school_age: vacancy.accepting_school_age,
-          available_date: vacancy.available_date,
-          full_time_available: vacancy.full_time_available,
-          part_time_available: vacancy.part_time_available,
-          notes: vacancy.notes || '',
-        });
+    console.log('[Provider] Loading provider data for:', userId);
+    try {
+      const providerData = await getProvider(userId);
+      console.log('[Provider] getProvider result:', providerData ? 'found' : 'not found');
+
+      if (providerData) {
+        setProvider(providerData);
+        loadChildren(userId);
+        console.log('[Provider] Loading vacancy data...');
+        const vacancy = await getVacancy(userId);
+        console.log('[Provider] getVacancy result:', vacancy ? 'found' : 'not found');
+        if (vacancy) {
+          setVacancyData({
+            infant_spots: vacancy.infant_spots,
+            toddler_spots: vacancy.toddler_spots,
+            preschool_spots: vacancy.preschool_spots,
+            school_age_spots: vacancy.school_age_spots,
+            accepting_infants: vacancy.accepting_infants,
+            accepting_toddlers: vacancy.accepting_toddlers,
+            accepting_preschool: vacancy.accepting_preschool,
+            accepting_school_age: vacancy.accepting_school_age,
+            available_date: vacancy.available_date,
+            full_time_available: vacancy.full_time_available,
+            part_time_available: vacancy.part_time_available,
+            waitlist_available: vacancy.waitlist_available || false,
+            notes: vacancy.notes || '',
+          });
+        }
+        console.log('[Provider] Setting view to dashboard');
+        setView('dashboard');
+      } else {
+        console.log('[Provider] No provider found, setting view to onboarding');
+        setView('onboarding');
       }
-      setView('dashboard');
-    } else {
+    } catch (err) {
+      console.error('[Provider] Exception loading provider data:', err);
       setView('onboarding');
     }
   };
@@ -261,7 +340,29 @@ export function RegistryApp() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t('common.loading')}</p>
+          <p className="text-xs text-gray-400 mt-2">Check browser console for debug info</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-600 text-2xl">!</span>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Connection Error</h2>
+          <p className="text-gray-600 mb-4">{loadingError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Refresh Page
+          </button>
+          <p className="text-xs text-gray-400 mt-4">Check browser console (F12) for detailed error info</p>
         </div>
       </div>
     );
@@ -448,6 +549,7 @@ export function RegistryApp() {
         available_date: prev?.available_date || new Date().toISOString().split('T')[0],
         full_time_available: prev?.full_time_available ?? true,
         part_time_available: prev?.part_time_available ?? false,
+        waitlist_available: prev?.waitlist_available ?? false,
         notes: prev?.notes || '',
       }));
     };
@@ -517,6 +619,7 @@ export function RegistryApp() {
             onEdit={setEditingChild}
             onRemove={removeChild}
             onAdd={() => setShowChildForm(true)}
+            onClearAll={clearChildren}
           />
         </div>
 
