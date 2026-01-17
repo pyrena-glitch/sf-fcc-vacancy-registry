@@ -5,3 +5,15 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
+
+/* Safe area support for iOS devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Add padding for mobile bottom nav */
+@media (max-width: 767px) {
+  .mobile-bottom-padding {
+    padding-bottom: 5rem; /* Height of bottom nav + some extra */
+  }
+}

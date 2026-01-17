@@ -33,19 +33,19 @@ export function ChildForm({ onSubmit, onCancel, initialData }: ChildFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 my-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg sm:text-xl font-semibold">
             {initialData ? 'Edit Child' : 'Add New Child'}
           </h2>
-          <button onClick={onCancel} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 p-1">
             <X size={24} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 First Name *
@@ -72,7 +72,7 @@ export function ChildForm({ onSubmit, onCancel, initialData }: ChildFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Date of Birth *
@@ -99,7 +99,7 @@ export function ChildForm({ onSubmit, onCancel, initialData }: ChildFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Expected Departure

@@ -265,83 +265,90 @@ export function RegistryApp() {
     );
   }
 
-  // Navigation header for logged-in providers
-  const ProviderNav = () => (
-    <div className="bg-white border-b">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setView('public')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-              view === 'public'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Eye size={18} />
-            Public View
-          </button>
-          <button
-            onClick={() => setView('dashboard')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-              view === 'dashboard'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Edit3 size={18} />
-            Vacancies
-          </button>
-          <button
-            onClick={() => setView('roster')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-              view === 'roster'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Users size={18} />
-            Roster
-          </button>
-          <button
-            onClick={() => setView('projections')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-              view === 'projections'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <BarChart3 size={18} />
-            Projections
-          </button>
-          <button
-            onClick={() => setView('settings')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-              view === 'settings'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Settings size={18} />
-            Settings
-          </button>
+  // Navigation for logged-in providers
+  // Desktop: top horizontal nav
+  // Mobile: bottom tab bar
+  const ProviderNav = () => {
+    const navItems = [
+      { view: 'public' as View, icon: Eye, label: 'Public' },
+      { view: 'dashboard' as View, icon: Edit3, label: 'Vacancies' },
+      { view: 'roster' as View, icon: Users, label: 'Roster' },
+      { view: 'projections' as View, icon: BarChart3, label: 'Projections' },
+      { view: 'settings' as View, icon: Settings, label: 'Settings' },
+    ];
+
+    return (
+      <>
+        {/* Desktop top nav - hidden on mobile */}
+        <div className="hidden md:block bg-white border-b">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {navItems.map(item => (
+                <button
+                  key={item.view}
+                  onClick={() => setView(item.view)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                    view === item.view
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <item.icon size={18} />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-2 text-sm text-gray-600">
+                <UserIcon size={16} />
+                {provider?.business_name || user?.email}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <LogOut size={16} />
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-2 text-sm text-gray-600">
-            <UserIcon size={16} />
-            {provider?.business_name || user?.email}
+
+        {/* Mobile top bar - just shows title and sign out */}
+        <div className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
+          <span className="font-medium text-gray-900 truncate">
+            {provider?.business_name || 'Dashboard'}
           </span>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600"
           >
             <LogOut size={16} />
-            Sign Out
           </button>
         </div>
-      </div>
-    </div>
-  );
+
+        {/* Mobile bottom nav - fixed at bottom */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-bottom">
+          <div className="flex justify-around items-center py-2">
+            {navItems.map(item => (
+              <button
+                key={item.view}
+                onClick={() => setView(item.view)}
+                className={`flex flex-col items-center gap-1 px-3 py-1 min-w-0 ${
+                  view === item.view
+                    ? 'text-blue-600'
+                    : 'text-gray-500'
+                }`}
+              >
+                <item.icon size={20} />
+                <span className="text-xs truncate">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  };
 
   // Public view with option to sign in
   if (view === 'public') {
@@ -436,7 +443,7 @@ export function RegistryApp() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ProviderNav />
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 mobile-bottom-padding">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">{provider.business_name}</h1>
             <p className="text-gray-600">
@@ -483,7 +490,7 @@ export function RegistryApp() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ProviderNav />
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 mobile-bottom-padding">
           <div className="flex justify-end mb-4">
             <button
               onClick={() => setShowImport(true)}
@@ -532,7 +539,7 @@ export function RegistryApp() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ProviderNav />
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 mobile-bottom-padding">
           <Dashboard
             children={children}
             capacityConfig={getCapacityConfig()}
@@ -547,7 +554,7 @@ export function RegistryApp() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ProviderNav />
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 mobile-bottom-padding">
           <ProviderSettings
             provider={provider}
             onSave={handleUpdateProvider}
