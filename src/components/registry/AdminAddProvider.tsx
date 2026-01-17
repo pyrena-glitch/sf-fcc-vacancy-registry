@@ -25,6 +25,7 @@ export function AdminAddProvider({ onComplete, onCancel }: AdminAddProviderProps
     contact_email: '',
     website: '',
     languages: ['English'] as string[],
+    is_elfa_network: false,
     // Vacancy info
     infant_spots: 0,
     toddler_spots: 0,
@@ -45,6 +46,15 @@ export function AdminAddProvider({ onComplete, onCancel }: AdminAddProviderProps
     }));
   };
 
+  // Auto-check ELFA when license number changes
+  const handleLicenseChange = async (license: string) => {
+    setFormData(prev => ({ ...prev, license_number: license }));
+    if (license.length === 9) {
+      const isElfa = await checkElfaStatus(license);
+      setFormData(prev => ({ ...prev, is_elfa_network: isElfa }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -53,10 +63,6 @@ export function AdminAddProvider({ onComplete, onCancel }: AdminAddProviderProps
     try {
       // Generate a random UUID for admin-created provider
       const providerId = crypto.randomUUID();
-
-      // Check ELFA network status
-      const isElfa = await checkElfaStatus(formData.license_number);
-      console.log('ELFA check result:', isElfa);
 
       // Insert provider
       const { error: providerError } = await supabase
@@ -76,7 +82,7 @@ export function AdminAddProvider({ onComplete, onCancel }: AdminAddProviderProps
           contact_email: formData.contact_email,
           website: formData.website || null,
           languages: formData.languages,
-          is_elfa_network: isElfa,
+          is_elfa_network: formData.is_elfa_network,
           is_active: true,
           is_approved: true,
         });
@@ -176,11 +182,20 @@ export function AdminAddProvider({ onComplete, onCancel }: AdminAddProviderProps
                     type="text"
                     required
                     value={formData.license_number}
-                    onChange={e => setFormData(prev => ({ ...prev, license_number: e.target.value }))}
+                    onChange={e => handleLicenseChange(e.target.value)}
                     placeholder="384001234"
                     pattern="\d{9}"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
+                  <label className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_elfa_network}
+                      onChange={e => setFormData(prev => ({ ...prev, is_elfa_network: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-yellow-700 font-medium">ELFA Network Member</span>
+                  </label>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
