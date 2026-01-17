@@ -53,23 +53,21 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
   const handleAutoFill = () => {
     if (!onAutoFill) return;
 
-    // The same spot can be filled by different age groups
-    // So we report: "I have X spots, and I'll accept these ages"
-    //
     // Infant spots are limited by CA regulations
-    // The rest is just total available (same pool)
-
     const actualInfantAvailable = Math.min(infantAvailable, totalAvailable);
 
-    // Report spots available for each age group
-    // Note: these overlap - it's the same pool of spots
-    // The vacancy form represents "accepting X children of this age"
-    // Total reported should equal total available
+    // Remaining spots can go to toddler, preschool, or school-age
+    // Distribute evenly across all three non-infant groups
+    const remainingSpots = Math.max(0, totalAvailable - actualInfantAvailable);
+    const spotsPerGroup = Math.floor(remainingSpots / 3);
+    const extraSpots = remainingSpots % 3;
+
+    // Distribute: toddler gets extras first, then preschool
     onAutoFill({
       infant_spots: actualInfantAvailable,
-      toddler_spots: Math.max(0, totalAvailable - actualInfantAvailable),
-      preschool_spots: 0,
-      school_age_spots: 0,
+      toddler_spots: spotsPerGroup + (extraSpots >= 1 ? 1 : 0),
+      preschool_spots: spotsPerGroup + (extraSpots >= 2 ? 1 : 0),
+      school_age_spots: spotsPerGroup,
     });
   };
 
