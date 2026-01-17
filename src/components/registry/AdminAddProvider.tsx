@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LANGUAGES, SF_NEIGHBORHOODS } from '../../types/registry';
 import { Building2, MapPin, Phone, Globe, CheckCircle, AlertCircle, Shield, Baby } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, checkElfaStatus } from '../../lib/supabase';
 
 interface AdminAddProviderProps {
   onComplete: () => void;
@@ -54,6 +54,10 @@ export function AdminAddProvider({ onComplete, onCancel }: AdminAddProviderProps
       // Generate a random UUID for admin-created provider
       const providerId = crypto.randomUUID();
 
+      // Check ELFA network status
+      const isElfa = await checkElfaStatus(formData.license_number);
+      console.log('ELFA check result:', isElfa);
+
       // Insert provider
       const { error: providerError } = await supabase
         .from('providers')
@@ -72,7 +76,7 @@ export function AdminAddProvider({ onComplete, onCancel }: AdminAddProviderProps
           contact_email: formData.contact_email,
           website: formData.website || null,
           languages: formData.languages,
-          is_elfa_network: false,
+          is_elfa_network: isElfa,
           is_active: true,
           is_approved: true,
         });
