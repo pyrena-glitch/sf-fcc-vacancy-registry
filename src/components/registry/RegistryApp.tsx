@@ -190,6 +190,15 @@ export function RegistryApp() {
         return;
       }
 
+      // Skip USER_UPDATED event (password change, etc.) - no need to reload data
+      if (event === 'USER_UPDATED') {
+        console.log('[Auth] Skipping USER_UPDATED (no data reload needed)');
+        if (session?.user) {
+          setUser(session.user);
+        }
+        return;
+      }
+
       if (!isMounted) return;
 
       if (session?.user) {
