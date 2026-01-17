@@ -41,6 +41,8 @@ export function ProviderSettings({ provider, userEmail, onSave, onReverifyElfa }
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const handleChangePassword = async () => {
+    console.log('handleChangePassword called');
+
     if (newPassword.length < 6) {
       setPasswordError(t('settings.passwordTooShort'));
       return;
@@ -53,18 +55,28 @@ export function ProviderSettings({ provider, userEmail, onSave, onReverifyElfa }
     setPasswordLoading(true);
     setPasswordError('');
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    try {
+      console.log('Calling supabase.auth.updateUser...');
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      console.log('updateUser response:', { data, error });
 
-    setPasswordLoading(false);
+      setPasswordLoading(false);
 
-    if (error) {
-      setPasswordError(error.message);
-    } else {
-      setPasswordSuccess(true);
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowPasswordChange(false);
-      setTimeout(() => setPasswordSuccess(false), 3000);
+      if (error) {
+        console.error('Password update error:', error);
+        setPasswordError(error.message);
+      } else {
+        console.log('Password updated successfully');
+        setPasswordSuccess(true);
+        setNewPassword('');
+        setConfirmPassword('');
+        setShowPasswordChange(false);
+        setTimeout(() => setPasswordSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error('Password update exception:', err);
+      setPasswordLoading(false);
+      setPasswordError(err instanceof Error ? err.message : 'Unknown error');
     }
   };
 
