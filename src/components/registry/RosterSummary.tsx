@@ -1,5 +1,5 @@
 import { Child, CapacityConfig } from '../../types';
-import { calculateCurrentVacancies, calculateProjectedOpenings } from '../../utils/projections';
+import { calculateProjectedOpenings } from '../../utils/projections';
 import { Users, TrendingUp, Wand2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -31,7 +31,6 @@ function getDetailedAgeGroup(dob: string): 'infant' | 'toddler' | 'preschool' | 
 }
 
 export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSummaryProps) {
-  const vacancies = calculateCurrentVacancies(children, capacityConfig);
   const projections = calculateProjectedOpenings(children, 6);
 
   // Count children by detailed age groups
@@ -46,25 +45,48 @@ export function RosterSummary({ children, capacityConfig, onAutoFill }: RosterSu
   const totalCapacity = capacityConfig.totalCapacity;
   const totalAvailable = Math.max(0, totalCapacity - totalEnrolled);
 
-  // Get infant vacancy from compliance calculation
-  const infantVacancy = vacancies.find(v => v.ageGroup === 'infant');
-  const infantAvailable = infantVacancy ? Math.max(0, infantVacancy.available) : 0;
+  // Calculate infant limit AT FULL CAPACITY per CA Regulation 102416.5
+  // Large Family: 1-12 children = max 4 infants, 13-14 children = max 3 infants
+  // Small Family: 1-4 = max 4, 5-6 = max 3, 7-8 = max 2
+  const programType = capacityConfig.programType;
+  const atCapacityInfantLimit = programType === 'small_family'
+    ? (totalCapacity <= 4 ? 4 : totalCapacity <= 6 ? 3 : 2)
+    : (totalCapacity <= 12 ? 4 : 3);
+  const infantAvailable = Math.max(0, Math.min(
+    atCapacityInfantLimit - ageCounts.infant,
+    totalAvailable
+  ));
 
   const handleAutoFill = () => {
     if (!onAutoFill) return;
 
-    // Infant spots are limited by CA regulations
-    const actualInfantAvailable = Math.min(infantAvailable, totalAvailable);
+    // CA Regulation 102416.5 - infant limits depend on TOTAL children at capacity
+    // Large Family: 1-12 children = max 4 infants, 13-14 children = max 3 infants
+    // Small Family: 1-4 = max 4, 5-6 = max 3, 7-8 = max 2
+    //
+    // For vacancy reporting, we need infant limit AT FULL CAPACITY
+    const programType = capacityConfig.programType;
+    const atCapacityInfantLimit = programType === 'small_family'
+      ? (totalCapacity <= 4 ? 4 : totalCapacity <= 6 ? 3 : 2)
+      : (totalCapacity <= 12 ? 4 : 3);
 
-    // Remaining spots can go to toddler, preschool, or school-age
-    // Distribute evenly across all three non-infant groups
-    const remainingSpots = Math.max(0, totalAvailable - actualInfantAvailable);
+    // Current infants already enrolled
+    const currentInfants = ageCounts.infant;
+
+    // Infant spots = limit at capacity minus current infants
+    const infantSpotsAvailable = Math.max(0, Math.min(
+      atCapacityInfantLimit - currentInfants,
+      totalAvailable
+    ));
+
+    // Remaining spots go to non-infant age groups
+    const remainingSpots = Math.max(0, totalAvailable - infantSpotsAvailable);
     const spotsPerGroup = Math.floor(remainingSpots / 3);
     const extraSpots = remainingSpots % 3;
 
-    // Distribute: toddler gets extras first, then preschool
+    // Distribute evenly: toddler gets extras first, then preschool
     onAutoFill({
-      infant_spots: actualInfantAvailable,
+      infant_spots: infantSpotsAvailable,
       toddler_spots: spotsPerGroup + (extraSpots >= 1 ? 1 : 0),
       preschool_spots: spotsPerGroup + (extraSpots >= 2 ? 1 : 0),
       school_age_spots: spotsPerGroup,
