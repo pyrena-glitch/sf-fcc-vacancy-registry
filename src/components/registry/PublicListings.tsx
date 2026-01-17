@@ -21,9 +21,10 @@ import { useLanguage } from '../../i18n/LanguageContext';
 interface PublicListingsProps {
   listings: PublicListing[];
   loading?: boolean;
+  onSignIn?: () => void;
 }
 
-export function PublicListings({ listings, loading }: PublicListingsProps) {
+export function PublicListings({ listings, loading, onSignIn }: PublicListingsProps) {
   const { t } = useLanguage();
   const [filters, setFilters] = useState<SearchFilters>({});
   const [showFilters, setShowFilters] = useState(false);
@@ -580,9 +581,12 @@ export function PublicListings({ listings, loading }: PublicListingsProps) {
           </p>
           <p className="mt-1">
             {t('publicListings.areYouProvider')}{' '}
-            <a href="#" className="text-blue-600 hover:underline">
+            <button
+              onClick={onSignIn}
+              className="text-blue-600 hover:underline"
+            >
               {t('publicListings.reportVacancies')}
-            </a>
+            </button>
           </p>
           <p className="mt-2 text-xs text-gray-400">
             v{__APP_VERSION__}

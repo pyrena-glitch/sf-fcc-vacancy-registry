@@ -475,7 +475,7 @@ export function RegistryApp() {
             <LanguageSwitcher className="ml-4 text-xs bg-blue-500 border-blue-400 text-white" />
           </div>
         )}
-        <PublicListings listings={publicListings} loading={listingsLoading} />
+        <PublicListings listings={publicListings} loading={listingsLoading} onSignIn={() => setView('auth')} />
       </div>
     );
   }
