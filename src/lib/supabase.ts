@@ -73,17 +73,17 @@ export async function getProvider(userId: string): Promise<Provider | null> {
 }
 
 export async function createProvider(userId: string, providerData: ProviderFormData): Promise<{ error?: string }> {
-  // Check if provider is in ELFA network
-  const isElfa = await checkElfaStatus(providerData.license_number);
-  console.log(`ELFA check for ${providerData.license_number}: ${isElfa}`);
+  try {
+    // Check if provider is in ELFA network
+    console.log('Starting provider creation for:', userId);
+    const isElfa = await checkElfaStatus(providerData.license_number);
+    console.log(`ELFA check for ${providerData.license_number}: ${isElfa}`);
 
-  const { error } = await supabase
-    .from('providers')
-    .insert({
+    const insertData = {
       id: userId,
       email: providerData.contact_email,
       license_number: providerData.license_number,
-      license_verified: true, // Would verify with CA licensing API
+      license_verified: true,
       business_name: providerData.business_name,
       owner_name: providerData.owner_name,
       program_type: providerData.program_type,
@@ -97,13 +97,25 @@ export async function createProvider(userId: string, providerData: ProviderFormD
       is_elfa_network: isElfa,
       is_active: true,
       is_approved: true,
-    });
+    };
 
-  if (error) {
-    console.error('Error creating provider:', error);
-    return { error: error.message };
+    console.log('Inserting provider data:', insertData);
+
+    const { error } = await supabase
+      .from('providers')
+      .insert(insertData);
+
+    if (error) {
+      console.error('Error creating provider:', error);
+      return { error: error.message };
+    }
+
+    console.log('Provider created successfully');
+    return {};
+  } catch (err) {
+    console.error('Exception in createProvider:', err);
+    return { error: err instanceof Error ? err.message : 'Unknown error occurred' };
   }
-  return {};
 }
 
 export async function updateProvider(userId: string, updates: Partial<Provider>): Promise<{ error?: string }> {
