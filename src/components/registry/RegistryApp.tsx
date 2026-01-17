@@ -27,10 +27,12 @@ import { Dashboard } from '../Dashboard';
 import { CsvImport } from '../CsvImport';
 import { RosterSummary } from './RosterSummary';
 import { LogOut, User as UserIcon, Home, Edit3, Eye, Settings, Users, BarChart3 } from 'lucide-react';
+import { useLanguage, LanguageSwitcher } from '../../i18n/LanguageContext';
 
 type View = 'public' | 'auth' | 'onboarding' | 'dashboard' | 'roster' | 'projections' | 'settings';
 
 export function RegistryApp() {
+  const { t } = useLanguage();
   const [view, setView] = useState<View>('public');
   const [user, setUser] = useState<User | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
@@ -269,12 +271,13 @@ export function RegistryApp() {
   // Desktop: top horizontal nav
   // Mobile: bottom tab bar
   const ProviderNav = () => {
+    const { t } = useLanguage();
     const navItems = [
-      { view: 'public' as View, icon: Eye, label: 'Public' },
-      { view: 'dashboard' as View, icon: Edit3, label: 'Vacancies' },
-      { view: 'roster' as View, icon: Users, label: 'Roster' },
-      { view: 'projections' as View, icon: BarChart3, label: 'Projections' },
-      { view: 'settings' as View, icon: Settings, label: 'Settings' },
+      { view: 'public' as View, icon: Eye, labelKey: 'nav.publicView' },
+      { view: 'dashboard' as View, icon: Edit3, labelKey: 'nav.vacancies' },
+      { view: 'roster' as View, icon: Users, labelKey: 'nav.roster' },
+      { view: 'projections' as View, icon: BarChart3, labelKey: 'nav.projections' },
+      { view: 'settings' as View, icon: Settings, labelKey: 'nav.settings' },
     ];
 
     return (
@@ -294,11 +297,12 @@ export function RegistryApp() {
                   }`}
                 >
                   <item.icon size={18} />
-                  {item.label}
+                  {t(item.labelKey)}
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               <span className="flex items-center gap-2 text-sm text-gray-600">
                 <UserIcon size={16} />
                 {provider?.business_name || user?.email}
@@ -308,7 +312,7 @@ export function RegistryApp() {
                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
               >
                 <LogOut size={16} />
-                Sign Out
+                {t('common.signOut')}
               </button>
             </div>
           </div>
@@ -319,12 +323,15 @@ export function RegistryApp() {
           <span className="font-medium text-gray-900 truncate">
             {provider?.business_name || 'Dashboard'}
           </span>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600"
-          >
-            <LogOut size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher className="text-xs" />
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Mobile bottom nav - fixed at bottom */}
@@ -341,7 +348,7 @@ export function RegistryApp() {
                 }`}
               >
                 <item.icon size={20} />
-                <span className="text-xs truncate">{item.label}</span>
+                <span className="text-xs truncate">{t(item.labelKey)}</span>
               </button>
             ))}
           </div>
@@ -356,14 +363,15 @@ export function RegistryApp() {
       <div>
         {user && provider && <ProviderNav />}
         {!user && (
-          <div className="bg-blue-600 text-white py-2 px-4 text-center text-sm">
-            <span>Are you a licensed FCC provider? </span>
+          <div className="bg-blue-600 text-white py-2 px-4 flex items-center justify-center gap-2 text-sm">
+            <span>{t('publicListings.areYouProvider')} </span>
             <button
               onClick={() => setView('auth')}
               className="underline font-medium hover:text-blue-100"
             >
-              Sign in to report your vacancies
+              {t('publicListings.signInPrompt')}
             </button>
+            <LanguageSwitcher className="ml-4 text-xs bg-blue-500 border-blue-400 text-white" />
           </div>
         )}
         <PublicListings listings={publicListings} loading={listingsLoading} />
@@ -376,14 +384,15 @@ export function RegistryApp() {
     return (
       <div>
         <div className="bg-white border-b py-3 px-4">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
             <button
               onClick={() => setView('public')}
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
             >
               <Home size={16} />
-              Back to Public Listings
+              {t('auth.backToListings')}
             </button>
+            <LanguageSwitcher />
           </div>
         </div>
         <ProviderAuth
@@ -400,14 +409,17 @@ export function RegistryApp() {
       <div>
         <div className="bg-white border-b py-3 px-4">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <span className="text-sm text-gray-600">Setting up your account...</span>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-            >
-              <LogOut size={16} />
-              Sign Out
-            </button>
+            <span className="text-sm text-gray-600">{t('common.loading')}</span>
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              >
+                <LogOut size={16} />
+                {t('common.signOut')}
+              </button>
+            </div>
           </div>
         </div>
         <ProviderOnboarding onComplete={handleOnboardingComplete} />

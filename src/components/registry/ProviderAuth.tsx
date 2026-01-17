@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail, Lock, Chrome, ArrowRight, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface ProviderAuthProps {
   onEmailAuth: (email: string, password: string, isSignUp: boolean) => Promise<{ error?: string }>;
@@ -7,6 +8,7 @@ interface ProviderAuthProps {
 }
 
 export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,12 +55,10 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            SF FCC Vacancy Registry
+            {t('auth.title')}
           </h1>
           <p className="text-gray-600">
-            {mode === 'signin'
-              ? 'Sign in to manage your vacancy listing'
-              : 'Create an account to report your vacancies'}
+            {t('auth.subtitle')}
           </p>
         </div>
 
@@ -70,7 +70,7 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
             className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <Chrome size={20} className="text-blue-500" />
-            <span className="font-medium">Continue with Google</span>
+            <span className="font-medium">{t('auth.continueWithGoogle')}</span>
           </button>
 
           <div className="relative my-6">
@@ -78,7 +78,7 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">or use email</span>
+              <span className="px-4 bg-white text-gray-500">{t('auth.orContinueWith')}</span>
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+                {t('common.email')}
               </label>
               <div className="relative">
                 <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -95,7 +95,7 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -103,7 +103,7 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
+                {t('common.password')}
               </label>
               <div className="relative">
                 <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -112,7 +112,7 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={t('auth.passwordPlaceholder')}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -121,7 +121,7 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
             {mode === 'signup' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
+                  {t('common.password')}
                 </label>
                 <div className="relative">
                   <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -150,10 +150,10 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
             >
               {loading ? (
-                'Please wait...'
+                t('common.loading')
               ) : (
                 <>
-                  {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                  {mode === 'signin' ? t('common.signIn') : t('auth.createAccount')}
                   <ArrowRight size={18} />
                 </>
               )}
@@ -163,33 +163,27 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
           <div className="mt-6 text-center text-sm">
             {mode === 'signin' ? (
               <p className="text-gray-600">
-                Don't have an account?{' '}
+                {t('auth.noAccount')}{' '}
                 <button
                   onClick={() => setMode('signup')}
                   className="text-blue-600 hover:underline font-medium"
                 >
-                  Sign up
+                  {t('common.signUp')}
                 </button>
               </p>
             ) : (
               <p className="text-gray-600">
-                Already have an account?{' '}
+                {t('auth.hasAccount')}{' '}
                 <button
                   onClick={() => setMode('signin')}
                   className="text-blue-600 hover:underline font-medium"
                 >
-                  Sign in
+                  {t('common.signIn')}
                 </button>
               </p>
             )}
           </div>
         </div>
-
-        <p className="text-center text-xs text-gray-500 mt-6">
-          By signing up, you agree to report accurate vacancy information
-          <br />
-          for your licensed Family Child Care program.
-        </p>
       </div>
     </div>
   );
