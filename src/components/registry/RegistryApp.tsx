@@ -21,6 +21,7 @@ import { ProviderOnboarding, ProviderFormData } from './ProviderOnboarding';
 import { VacancyForm, VacancyFormData } from './VacancyForm';
 import { ProviderSettings } from './ProviderSettings';
 import { PublicListings } from './PublicListings';
+import { AdminAddProvider } from './AdminAddProvider';
 import { ChildList } from '../ChildList';
 import { ChildForm } from '../ChildForm';
 import { Dashboard } from '../Dashboard';
@@ -29,7 +30,10 @@ import { RosterSummary } from './RosterSummary';
 import { LogOut, User as UserIcon, Home, Edit3, Eye, Settings, Users, BarChart3 } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../../i18n/LanguageContext';
 
-type View = 'public' | 'auth' | 'onboarding' | 'dashboard' | 'roster' | 'projections' | 'settings';
+// Admin password - in production, use environment variable
+const ADMIN_PASSWORD = 'fccasf2024';
+
+type View = 'public' | 'auth' | 'onboarding' | 'dashboard' | 'roster' | 'projections' | 'settings' | 'admin';
 
 export function RegistryApp() {
   const { t } = useLanguage();
@@ -58,6 +62,17 @@ export function RegistryApp() {
       totalCapacity: provider.licensed_capacity,
     };
   }, [provider]);
+
+  // Check for admin access via URL parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const adminParam = params.get('admin');
+    if (adminParam === ADMIN_PASSWORD) {
+      setView('admin');
+      // Clean URL without reloading
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Load children from localStorage for this provider
   const loadChildren = useCallback((providerId: string) => {
@@ -343,6 +358,19 @@ export function RegistryApp() {
     await updateProvider(user.id, { is_elfa_network: isElfa });
     await loadProviderData(user.id);
   };
+
+  // Admin view - accessible via URL ?admin=fccasf2024
+  if (view === 'admin') {
+    return (
+      <AdminAddProvider
+        onComplete={() => {
+          loadPublicListings();
+          setView('public');
+        }}
+        onCancel={() => setView('public')}
+      />
+    );
+  }
 
   if (loading) {
     return (
