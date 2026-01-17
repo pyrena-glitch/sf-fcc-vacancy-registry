@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Mail, Lock, Chrome, ArrowRight, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Chrome, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { supabase } from '../../lib/supabase';
 
 interface ProviderAuthProps {
   onEmailAuth: (email: string, password: string, isSignUp: boolean) => Promise<{ error?: string }>;
@@ -9,16 +10,35 @@ interface ProviderAuthProps {
 
 export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
   const { t } = useLanguage();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (mode === 'forgot') {
+      if (!email) {
+        setError(t('auth.enterEmail'));
+        return;
+      }
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else {
+        setResetSent(true);
+      }
+      return;
+    }
 
     if (mode === 'signup' && password !== confirmPassword) {
       setError('Passwords do not match');
@@ -83,106 +103,175 @@ export function ProviderAuth({ onEmailAuth, onGoogleAuth }: ProviderAuthProps) {
           </div>
 
           {/* Email Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('common.email')}
-              </label>
-              <div className="relative">
-                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder={t('auth.emailPlaceholder')}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+          {mode === 'forgot' ? (
+            // Forgot Password Form
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {resetSent ? (
+                <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-4 rounded-lg">
+                  <CheckCircle size={18} />
+                  <span>{t('auth.resetEmailSent')}</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-600 mb-4">{t('auth.forgotPasswordHelp')}</p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('common.email')}
+                    </label>
+                    <div className="relative">
+                      <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder={t('auth.emailPlaceholder')}
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('common.password')}
-              </label>
-              <div className="relative">
-                <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder={t('auth.passwordPlaceholder')}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+                  {error && (
+                    <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                      <AlertCircle size={16} />
+                      <span>{error}</span>
+                    </div>
+                  )}
 
-            {mode === 'signup' && (
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+                  >
+                    {loading ? t('common.loading') : t('auth.sendResetLink')}
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={() => { setMode('signin'); setResetSent(false); setError(''); }}
+                className="w-full text-sm text-gray-600 hover:text-gray-800"
+              >
+                {t('common.back')} {t('common.signIn').toLowerCase()}
+              </button>
+            </form>
+          ) : (
+            // Sign In / Sign Up Form
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('common.password')}
+                  {t('common.email')}
                 </label>
+                <div className="relative">
+                  <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder={t('auth.emailPlaceholder')}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {t('common.password')}
+                  </label>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode('forgot'); setError(''); }}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      {t('auth.forgotPassword')}
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="password"
                     required
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder={t('auth.passwordPlaceholder')}
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
-            )}
 
-            {error && (
-              <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
-            >
-              {loading ? (
-                t('common.loading')
-              ) : (
-                <>
-                  {mode === 'signin' ? t('common.signIn') : t('auth.createAccount')}
-                  <ArrowRight size={18} />
-                </>
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('settings.confirmPassword')}
+                  </label>
+                  <div className="relative">
+                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               )}
-            </button>
-          </form>
 
-          <div className="mt-6 text-center text-sm">
-            {mode === 'signin' ? (
-              <p className="text-gray-600">
-                {t('auth.noAccount')}{' '}
-                <button
-                  onClick={() => setMode('signup')}
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  {t('common.signUp')}
-                </button>
-              </p>
-            ) : (
-              <p className="text-gray-600">
-                {t('auth.hasAccount')}{' '}
-                <button
-                  onClick={() => setMode('signin')}
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  {t('common.signIn')}
-                </button>
-              </p>
-            )}
-          </div>
+              {error && (
+                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+              >
+                {loading ? (
+                  t('common.loading')
+                ) : (
+                  <>
+                    {mode === 'signin' ? t('common.signIn') : t('auth.createAccount')}
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {mode !== 'forgot' && (
+            <div className="mt-6 text-center text-sm">
+              {mode === 'signin' ? (
+                <p className="text-gray-600">
+                  {t('auth.noAccount')}{' '}
+                  <button
+                    onClick={() => setMode('signup')}
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    {t('common.signUp')}
+                  </button>
+                </p>
+              ) : (
+                <p className="text-gray-600">
+                  {t('auth.hasAccount')}{' '}
+                  <button
+                    onClick={() => setMode('signin')}
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    {t('common.signIn')}
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

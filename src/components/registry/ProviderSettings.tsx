@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { Provider } from '../../types/registry';
 import { LANGUAGES, SF_NEIGHBORHOODS } from '../../types/registry';
-import { Save, AlertCircle, CheckCircle, Shield, MapPin, Phone, Globe, FileCheck } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, Shield, MapPin, Phone, Globe, FileCheck, User, Key } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { supabase } from '../../lib/supabase';
 
 interface ProviderSettingsProps {
   provider: Provider;
+  userEmail: string;
   onSave: (updates: Partial<Provider>) => Promise<{ error?: string }>;
   onReverifyElfa?: () => Promise<void>;
 }
 
-export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderSettingsProps) {
+export function ProviderSettings({ provider, userEmail, onSave, onReverifyElfa }: ProviderSettingsProps) {
   const { t } = useLanguage();
   const [formData, setFormData] = useState({
     license_number: provider.license_number,
@@ -29,6 +31,42 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      setPasswordError(t('settings.passwordTooShort'));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t('settings.passwordsDoNotMatch'));
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordError('');
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    setPasswordLoading(false);
+
+    if (error) {
+      setPasswordError(error.message);
+    } else {
+      setPasswordSuccess(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordChange(false);
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    }
+  };
 
   const handleToggleLanguage = (language: string) => {
     setFormData(prev => ({
@@ -78,6 +116,87 @@ export function ProviderSettings({ provider, onSave, onReverifyElfa }: ProviderS
         <div>
           <h2 className="text-lg font-bold text-gray-900">{t('settings.title')}</h2>
           <p className="text-sm text-gray-500">{t('settings.subtitle')}</p>
+        </div>
+      </div>
+
+      {/* Account Section */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+        <div className="flex items-center gap-2 mb-3">
+          <User size={18} className="text-gray-600" />
+          <h3 className="font-medium text-gray-900">{t('settings.account')}</h3>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">{t('settings.loginEmail')}</label>
+            <p className="text-sm font-medium text-gray-900">{userEmail}</p>
+          </div>
+
+          {!showPasswordChange ? (
+            <button
+              type="button"
+              onClick={() => setShowPasswordChange(true)}
+              className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+            >
+              <Key size={14} />
+              {t('settings.changePassword')}
+            </button>
+          ) : (
+            <div className="space-y-3 pt-2 border-t">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">{t('settings.newPassword')}</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">{t('settings.confirmPassword')}</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              {passwordError && (
+                <p className="text-xs text-red-600">{passwordError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleChangePassword}
+                  disabled={passwordLoading}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {passwordLoading ? t('common.saving') : t('settings.updatePassword')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordChange(false);
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setPasswordError('');
+                  }}
+                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {passwordSuccess && (
+            <div className="flex items-center gap-2 text-green-600 text-sm">
+              <CheckCircle size={14} />
+              <span>{t('settings.passwordUpdated')}</span>
+            </div>
+          )}
         </div>
       </div>
 

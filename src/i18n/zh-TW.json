@@ -41,7 +41,12 @@
     "noAccount": "還沒有帳號？",
     "hasAccount": "已經有帳號？",
     "createAccount": "建立帳號",
-    "backToListings": "返回公開列表"
+    "backToListings": "返回公開列表",
+    "forgotPassword": "忘記密碼？",
+    "forgotPasswordHelp": "輸入您的電子郵件地址，我們將發送重設密碼的連結給您。",
+    "sendResetLink": "發送重設連結",
+    "resetEmailSent": "請檢查您的電子郵件以獲取密碼重設連結。",
+    "enterEmail": "請輸入您的電子郵件地址"
   },
   "onboarding": {
     "title": "完成您的服務提供者資料",
@@ -216,7 +221,16 @@
     "notElfaMember": "非 ELFA 網絡成員",
     "reverifyElfa": "重新驗證 ELFA",
     "saveSettings": "儲存變更",
-    "savedSuccess": "設定儲存成功！"
+    "savedSuccess": "設定儲存成功！",
+    "account": "帳號",
+    "loginEmail": "登入電子郵件",
+    "changePassword": "更改密碼",
+    "newPassword": "新密碼",
+    "confirmPassword": "確認密碼",
+    "updatePassword": "更新密碼",
+    "passwordUpdated": "密碼更新成功！",
+    "passwordTooShort": "密碼至少需要6個字元",
+    "passwordsDoNotMatch": "密碼不符"
   },
   "projections": {
     "title": "容量預測",
