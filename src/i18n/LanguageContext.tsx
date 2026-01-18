@@ -84,35 +84,30 @@ export function useLanguage() {
 
 // Language switcher component
 export function LanguageSwitcher({ className }: { className?: string }) {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
 
   return (
-    <div className={`flex items-center gap-1.5 ${className || ''}`}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="text-gray-500"
+    <div className={`flex items-center rounded-lg border border-gray-300 overflow-hidden ${className || ''}`}>
+      <button
+        onClick={() => setLanguage('en')}
+        className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+          language === 'en'
+            ? 'bg-blue-600 text-white'
+            : 'bg-white text-gray-600 hover:bg-gray-100'
+        }`}
       >
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="2" y1="12" x2="22" y2="12"/>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-      </svg>
-      <select
-        value={language}
-        onChange={(e) => setLanguage(e.target.value as Language)}
-        className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white cursor-pointer hover:border-gray-400"
-        aria-label={t('language.switchLanguage')}
+        EN
+      </button>
+      <button
+        onClick={() => setLanguage('zh-TW')}
+        className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+          language === 'zh-TW'
+            ? 'bg-blue-600 text-white'
+            : 'bg-white text-gray-600 hover:bg-gray-100'
+        }`}
       >
-        <option value="en">English</option>
-        <option value="zh-TW">繁體中文</option>
-      </select>
+        中文
+      </button>
     </div>
   );
 }
