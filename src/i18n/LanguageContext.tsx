@@ -83,14 +83,16 @@ export function useLanguage() {
 }
 
 // Language switcher component
-export function LanguageSwitcher({ className }: { className?: string }) {
+export function LanguageSwitcher({ className, compact }: { className?: string; compact?: boolean }) {
   const { language, setLanguage } = useLanguage();
 
+  const buttonPadding = compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm';
+
   return (
-    <div className={`flex items-center rounded-lg border border-gray-300 overflow-hidden ${className || ''}`}>
+    <div className={`inline-flex items-center rounded-lg border border-gray-300 overflow-hidden flex-shrink-0 ${className || ''}`}>
       <button
         onClick={() => setLanguage('en')}
-        className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+        className={`${buttonPadding} font-medium transition-colors whitespace-nowrap ${
           language === 'en'
             ? 'bg-blue-600 text-white'
             : 'bg-white text-gray-600 hover:bg-gray-100'
@@ -100,7 +102,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       </button>
       <button
         onClick={() => setLanguage('zh-TW')}
-        className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+        className={`${buttonPadding} font-medium transition-colors whitespace-nowrap ${
           language === 'zh-TW'
             ? 'bg-blue-600 text-white'
             : 'bg-white text-gray-600 hover:bg-gray-100'

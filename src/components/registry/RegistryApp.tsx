@@ -457,12 +457,12 @@ export function RegistryApp() {
         </div>
 
         {/* Mobile top bar - just shows title and sign out */}
-        <div className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
-          <span className="font-medium text-gray-900 truncate">
+        <div className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between gap-2">
+          <span className="font-medium text-gray-900 truncate flex-1 min-w-0">
             {provider?.business_name || 'Dashboard'}
           </span>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher className="text-xs" />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <LanguageSwitcher compact />
             <button
               onClick={handleSignOut}
               className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600"
@@ -501,15 +501,17 @@ export function RegistryApp() {
       <div>
         {user && provider && <ProviderNav />}
         {!user && (
-          <div className="bg-blue-600 text-white py-2 px-4 flex items-center justify-center gap-2 text-sm">
-            <span>{t('publicListings.areYouProvider')} </span>
-            <button
-              onClick={() => setView('auth')}
-              className="underline font-medium hover:text-blue-100"
-            >
-              {t('publicListings.signInPrompt')}
-            </button>
-            <LanguageSwitcher className="ml-4 text-xs bg-blue-500 border-blue-400 text-white" />
+          <div className="bg-blue-600 text-white py-2 px-4">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
+              <span className="whitespace-nowrap">{t('publicListings.areYouProvider')}</span>
+              <button
+                onClick={() => setView('auth')}
+                className="underline font-medium hover:text-blue-100 whitespace-nowrap"
+              >
+                {t('publicListings.signInPrompt')}
+              </button>
+              <LanguageSwitcher compact className="ml-2" />
+            </div>
           </div>
         )}
         <PublicListings listings={publicListings} loading={listingsLoading} onSignIn={() => setView('auth')} />
