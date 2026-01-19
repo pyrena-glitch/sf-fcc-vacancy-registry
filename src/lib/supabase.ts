@@ -224,3 +224,124 @@ export async function getPublicListings(): Promise<PublicListing[]> {
 
 // Re-export ELFA check for external use
 export { checkElfaStatus } from './elfa';
+
+// Organization types
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  website_url?: string;
+  owner_user_id: string;
+  created_at: string;
+}
+
+// Get organization owned by user
+export async function getOrganizationByOwner(userId: string): Promise<Organization | null> {
+  console.log('[Supabase] getOrganizationByOwner called for:', userId);
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('owner_user_id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('[Supabase] No organization found for user');
+        return null;
+      }
+      console.error('[Supabase] getOrganizationByOwner error:', error);
+      return null;
+    }
+    console.log('[Supabase] getOrganizationByOwner success:', data?.name);
+    return data;
+  } catch (err) {
+    console.error('[Supabase] getOrganizationByOwner exception:', err);
+    return null;
+  }
+}
+
+// Get all providers in an organization
+export async function getProvidersByOrganization(organizationId: string): Promise<Provider[]> {
+  console.log('[Supabase] getProvidersByOrganization called for:', organizationId);
+  try {
+    const { data, error } = await supabase
+      .from('providers')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .order('business_name');
+
+    if (error) {
+      console.error('[Supabase] getProvidersByOrganization error:', error);
+      return [];
+    }
+    console.log('[Supabase] getProvidersByOrganization success, count:', data?.length || 0);
+    return data || [];
+  } catch (err) {
+    console.error('[Supabase] getProvidersByOrganization exception:', err);
+    return [];
+  }
+}
+
+// Get vacancies for multiple providers
+export async function getVacanciesByProviderIds(providerIds: string[]): Promise<Record<string, Vacancy>> {
+  console.log('[Supabase] getVacanciesByProviderIds called for:', providerIds.length, 'providers');
+  try {
+    const { data, error } = await supabase
+      .from('vacancies')
+      .select('*')
+      .in('provider_id', providerIds);
+
+    if (error) {
+      console.error('[Supabase] getVacanciesByProviderIds error:', error);
+      return {};
+    }
+
+    // Convert to map by provider_id
+    const vacancyMap: Record<string, Vacancy> = {};
+    for (const v of data || []) {
+      vacancyMap[v.provider_id] = v;
+    }
+    console.log('[Supabase] getVacanciesByProviderIds success, count:', Object.keys(vacancyMap).length);
+    return vacancyMap;
+  } catch (err) {
+    console.error('[Supabase] getVacanciesByProviderIds exception:', err);
+    return {};
+  }
+}
+
+// Update vacancy for a specific provider (used by org owner)
+export async function updateProviderVacancy(providerId: string, vacancyData: VacancyFormData): Promise<{ error?: string }> {
+  const now = new Date().toISOString();
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
+  const { error } = await supabase
+    .from('vacancies')
+    .upsert({
+      provider_id: providerId,
+      infant_spots: vacancyData.infant_spots,
+      toddler_spots: vacancyData.toddler_spots,
+      preschool_spots: vacancyData.preschool_spots,
+      school_age_spots: vacancyData.school_age_spots,
+      accepting_infants: vacancyData.accepting_infants,
+      accepting_toddlers: vacancyData.accepting_toddlers,
+      accepting_preschool: vacancyData.accepting_preschool,
+      accepting_school_age: vacancyData.accepting_school_age,
+      available_date: vacancyData.available_date,
+      full_time_available: vacancyData.full_time_available,
+      part_time_available: vacancyData.part_time_available,
+      waitlist_available: vacancyData.waitlist_available,
+      notes: vacancyData.notes || null,
+      updated_at: now,
+      expires_at: expiresAt.toISOString(),
+    }, {
+      onConflict: 'provider_id',
+    });
+
+  if (error) {
+    console.error('Error updating provider vacancy:', error);
+    return { error: error.message };
+  }
+  return {};
+}

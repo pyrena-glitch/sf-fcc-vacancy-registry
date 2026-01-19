@@ -13,6 +13,9 @@ import {
   upsertVacancy,
   getPublicListings,
   checkElfaStatus,
+  getOrganizationByOwner,
+  getProvidersByOrganization,
+  Organization,
 } from '../../lib/supabase';
 import { Provider, PublicListing } from '../../types/registry';
 import { Child, CapacityConfig } from '../../types';
@@ -27,13 +30,14 @@ import { ChildForm } from '../ChildForm';
 import { Dashboard } from '../Dashboard';
 import { CsvImport } from '../CsvImport';
 import { RosterSummary } from './RosterSummary';
-import { LogOut, User as UserIcon, Home, Edit3, Eye, Settings, Users, BarChart3 } from 'lucide-react';
+import { OrganizationDashboard } from './OrganizationDashboard';
+import { LogOut, User as UserIcon, Home, Edit3, Eye, Settings, Users, BarChart3, Building2 } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../../i18n/LanguageContext';
 
 // Admin password - in production, use environment variable
 const ADMIN_PASSWORD = 'fccasf2024';
 
-type View = 'public' | 'auth' | 'onboarding' | 'dashboard' | 'roster' | 'projections' | 'settings' | 'admin';
+type View = 'public' | 'auth' | 'onboarding' | 'dashboard' | 'roster' | 'projections' | 'settings' | 'admin' | 'org-dashboard';
 
 export function RegistryApp() {
   const { t } = useLanguage();
@@ -45,6 +49,10 @@ export function RegistryApp() {
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [listingsLoading, setListingsLoading] = useState(true);
+
+  // Organization state (for multi-location owners)
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [orgProviders, setOrgProviders] = useState<Provider[]>([]);
 
   // Roster management state
   const [children, setChildren] = useState<Child[]>([]);
@@ -225,6 +233,8 @@ export function RegistryApp() {
         setUser(null);
         setProvider(null);
         setVacancyData(undefined);
+        setOrganization(null);
+        setOrgProviders([]);
       }
     });
 
@@ -243,6 +253,19 @@ export function RegistryApp() {
   const loadProviderData = async (userId: string) => {
     console.log('[Provider] Loading provider data for:', userId);
     try {
+      // First, check if user owns an organization
+      const org = await getOrganizationByOwner(userId);
+      if (org) {
+        console.log('[Organization] User owns organization:', org.name);
+        setOrganization(org);
+        const providers = await getProvidersByOrganization(org.id);
+        console.log('[Organization] Found providers:', providers.length);
+        setOrgProviders(providers);
+        setView('org-dashboard');
+        return;
+      }
+
+      // Otherwise, check for single provider account
       const providerData = await getProvider(userId);
       console.log('[Provider] getProvider result:', providerData ? 'found' : 'not found');
 
@@ -714,6 +737,53 @@ export function RegistryApp() {
             userEmail={user.email || ''}
             onSave={handleUpdateProvider}
             onReverifyElfa={handleReverifyElfa}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Organization dashboard view (for multi-location owners)
+  if (view === 'org-dashboard' && user && organization) {
+    const reloadOrgData = async () => {
+      const providers = await getProvidersByOrganization(organization.id);
+      setOrgProviders(providers);
+      await loadPublicListings();
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Simple nav for org users */}
+        <div className="bg-white border-b">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 size={20} className="text-blue-600" />
+              <span className="font-medium text-gray-900">{organization.name}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setView('public')}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <Eye size={16} />
+                <span className="hidden sm:inline">Public View</span>
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <LogOut size={16} />
+                <span className="hidden sm:inline">{t('common.signOut')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 py-6">
+          <OrganizationDashboard
+            organization={organization}
+            providers={orgProviders}
+            onRefresh={reloadOrgData}
           />
         </div>
       </div>
