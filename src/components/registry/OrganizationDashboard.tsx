@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Provider, Vacancy } from '../../types/registry';
 import { Organization, getVacanciesByProviderIds, updateProviderVacancy } from '../../lib/supabase';
 import { VacancyFormData } from './VacancyForm';
-import { ChevronRight, X, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { ChevronRight, X, Save, AlertCircle, CheckCircle, Upload, Download } from 'lucide-react';
 
 interface OrganizationDashboardProps {
   organization: Organization;
@@ -75,6 +75,13 @@ export function OrganizationDashboard({ organization, providers, onRefresh }: Or
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // CSV Import state
+  const [showImport, setShowImport] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadVacancies();
@@ -163,6 +170,146 @@ export function OrganizationDashboard({ organization, providers, onRefresh }: Or
     });
   };
 
+  // Download CSV template with current data
+  const handleDownloadTemplate = () => {
+    const headers = ['license_number', 'business_name', 'infant_spots', 'toddler_spots', 'preschool_spots', 'school_age_spots', 'available_date', 'waitlist'];
+    const rows = providers.map(p => {
+      const v = vacancies[p.id];
+      return [
+        p.license_number,
+        `"${p.business_name}"`,
+        v?.infant_spots || 0,
+        v?.toddler_spots || 0,
+        v?.preschool_spots || 0,
+        v?.school_age_spots || 0,
+        v?.available_date || '',
+        v?.waitlist_available ? 'yes' : 'no',
+      ].join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vacancy-data.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle CSV file import
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportError('');
+    setImportSuccess('');
+    setImporting(true);
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+
+      if (lines.length < 2) {
+        throw new Error('CSV must have a header row and at least one data row');
+      }
+
+      // Parse header to find column indices
+      const header = lines[0].toLowerCase().split(',').map(h => h.trim());
+      const licenseIdx = header.findIndex(h => h.includes('license'));
+      const infantIdx = header.findIndex(h => h.includes('infant'));
+      const toddlerIdx = header.findIndex(h => h.includes('toddler'));
+      const preschoolIdx = header.findIndex(h => h.includes('preschool'));
+      const schoolAgeIdx = header.findIndex(h => h.includes('school'));
+      const dateIdx = header.findIndex(h => h.includes('date') || h.includes('available'));
+      const waitlistIdx = header.findIndex(h => h.includes('waitlist'));
+
+      if (licenseIdx === -1) {
+        throw new Error('CSV must have a license_number column');
+      }
+
+      // Build license -> provider map
+      const licenseToProvider = new Map<string, Provider>();
+      for (const p of providers) {
+        licenseToProvider.set(p.license_number, p);
+      }
+
+      let updated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      // Process data rows
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        // Handle quoted fields
+        const values: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (const char of line) {
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+
+        const license = values[licenseIdx]?.trim();
+        if (!license) continue;
+
+        const provider = licenseToProvider.get(license);
+        if (!provider) {
+          errors.push(`Row ${i + 1}: License ${license} not found`);
+          skipped++;
+          continue;
+        }
+
+        const vacancyData: VacancyFormData = {
+          infant_spots: infantIdx >= 0 ? parseInt(values[infantIdx]) || 0 : 0,
+          toddler_spots: toddlerIdx >= 0 ? parseInt(values[toddlerIdx]) || 0 : 0,
+          preschool_spots: preschoolIdx >= 0 ? parseInt(values[preschoolIdx]) || 0 : 0,
+          school_age_spots: schoolAgeIdx >= 0 ? parseInt(values[schoolAgeIdx]) || 0 : 0,
+          accepting_infants: infantIdx >= 0 ? (parseInt(values[infantIdx]) || 0) > 0 : false,
+          accepting_toddlers: toddlerIdx >= 0 ? (parseInt(values[toddlerIdx]) || 0) > 0 : false,
+          accepting_preschool: preschoolIdx >= 0 ? (parseInt(values[preschoolIdx]) || 0) > 0 : false,
+          accepting_school_age: schoolAgeIdx >= 0 ? (parseInt(values[schoolAgeIdx]) || 0) > 0 : false,
+          available_date: dateIdx >= 0 && values[dateIdx] ? values[dateIdx] : new Date().toISOString().split('T')[0],
+          full_time_available: true,
+          part_time_available: false,
+          waitlist_available: waitlistIdx >= 0 ? ['yes', 'true', '1'].includes(values[waitlistIdx]?.toLowerCase()) : false,
+          notes: '',
+        };
+
+        const result = await updateProviderVacancy(provider.id, vacancyData);
+        if (result.error) {
+          errors.push(`Row ${i + 1}: ${result.error}`);
+          skipped++;
+        } else {
+          updated++;
+        }
+      }
+
+      await loadVacancies();
+      onRefresh();
+
+      if (errors.length > 0) {
+        setImportError(`Updated ${updated}, skipped ${skipped}. Errors: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`);
+      } else {
+        setImportSuccess(`Successfully updated ${updated} location${updated !== 1 ? 's' : ''}`);
+      }
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Failed to import CSV');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -174,10 +321,48 @@ export function OrganizationDashboard({ organization, providers, onRefresh }: Or
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">{organization.name}</h1>
-        <p className="text-sm text-gray-500">{providers.length} locations</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">{organization.name}</h1>
+          <p className="text-sm text-gray-500">{providers.length} locations</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 bg-white border rounded-lg hover:bg-gray-50"
+          >
+            <Download size={16} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            <Upload size={16} />
+            <span className="hidden sm:inline">Import CSV</span>
+          </button>
+        </div>
       </div>
+
+      {/* Import success/error messages */}
+      {importSuccess && (
+        <div className="mb-4 flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 px-4 py-3 rounded-lg">
+          <CheckCircle size={18} />
+          <span className="text-sm">{importSuccess}</span>
+          <button onClick={() => setImportSuccess('')} className="ml-auto text-green-600 hover:text-green-800">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {importError && (
+        <div className="mb-4 flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 px-4 py-3 rounded-lg">
+          <AlertCircle size={18} />
+          <span className="text-sm">{importError}</span>
+          <button onClick={() => setImportError('')} className="ml-auto text-red-600 hover:text-red-800">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Overview Card */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -220,6 +405,73 @@ export function OrganizationDashboard({ organization, providers, onRefresh }: Or
           </p>
         </div>
       </div>
+
+      {/* CSV Import Modal */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h3 className="font-semibold text-gray-900">Import Vacancy Data</h3>
+              <button
+                onClick={() => { setShowImport(false); setImportError(''); }}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="text-sm text-gray-600">
+                <p className="mb-3">Upload a CSV file to update vacancy data for all locations at once.</p>
+                <p className="font-medium text-gray-900 mb-2">Required columns:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-500">
+                  <li><code className="bg-gray-100 px-1 rounded">license_number</code> - to identify location</li>
+                  <li><code className="bg-gray-100 px-1 rounded">infant_spots</code>, <code className="bg-gray-100 px-1 rounded">toddler_spots</code>, etc.</li>
+                  <li><code className="bg-gray-100 px-1 rounded">available_date</code> - YYYY-MM-DD format</li>
+                  <li><code className="bg-gray-100 px-1 rounded">waitlist</code> - yes/no</li>
+                </ul>
+              </div>
+
+              <button
+                onClick={handleDownloadTemplate}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+              >
+                <Download size={16} />
+                Download template with current data
+              </button>
+
+              <div className="border-t pt-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label
+                  htmlFor="csv-upload"
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                    importing ? 'bg-gray-50 border-gray-300' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                  }`}
+                >
+                  {importing ? (
+                    <>
+                      <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+                      <span className="text-gray-600">Importing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={20} className="text-gray-400" />
+                      <span className="text-gray-600">Click to select CSV file</span>
+                    </>
+                  )}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {selectedProvider && editingVacancy && (

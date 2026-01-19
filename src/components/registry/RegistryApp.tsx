@@ -31,7 +31,7 @@ import { Dashboard } from '../Dashboard';
 import { CsvImport } from '../CsvImport';
 import { RosterSummary } from './RosterSummary';
 import { OrganizationDashboard } from './OrganizationDashboard';
-import { LogOut, User as UserIcon, Home, Edit3, Eye, Settings, Users, BarChart3, Building2 } from 'lucide-react';
+import { LogOut, User as UserIcon, Home, Edit3, Eye, Settings, Users, BarChart3, Building2, Key } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../../i18n/LanguageContext';
 
 // Admin password - in production, use environment variable
@@ -751,6 +751,126 @@ export function RegistryApp() {
       await loadPublicListings();
     };
 
+    // Account settings state
+    const OrgAccountSettings = () => {
+      const [showSettings, setShowSettings] = useState(false);
+      const [newPassword, setNewPassword] = useState('');
+      const [confirmPassword, setConfirmPassword] = useState('');
+      const [passwordLoading, setPasswordLoading] = useState(false);
+      const [passwordError, setPasswordError] = useState('');
+      const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+      const handleChangePassword = async () => {
+        if (newPassword.length < 6) {
+          setPasswordError('Password must be at least 6 characters');
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setPasswordError('Passwords do not match');
+          return;
+        }
+
+        setPasswordLoading(true);
+        setPasswordError('');
+
+        supabase.auth.updateUser({ password: newPassword })
+          .then(({ error }) => {
+            setPasswordLoading(false);
+            if (error) {
+              setPasswordError(error.message);
+            } else {
+              setPasswordSuccess(true);
+              setNewPassword('');
+              setConfirmPassword('');
+              setTimeout(() => {
+                setShowSettings(false);
+                setPasswordSuccess(false);
+              }, 2000);
+            }
+          })
+          .catch((err) => {
+            setPasswordLoading(false);
+            setPasswordError(err instanceof Error ? err.message : 'Unknown error');
+          });
+      };
+
+      return (
+        <>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+          >
+            <Settings size={16} />
+            <span className="hidden sm:inline">Account</span>
+          </button>
+
+          {showSettings && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl shadow-xl max-w-sm w-full">
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <h3 className="font-semibold text-gray-900">Account Settings</h3>
+                  <button
+                    onClick={() => { setShowSettings(false); setPasswordError(''); }}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <span className="sr-only">Close</span>
+                    ×
+                  </button>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Login Email</label>
+                    <p className="text-sm font-medium text-gray-900">{user.email}</p>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Key size={16} className="text-gray-600" />
+                      <span className="font-medium text-gray-900 text-sm">Change Password</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        placeholder="New password"
+                        className="w-full px-3 py-2 text-sm border rounded-lg"
+                      />
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm password"
+                        className="w-full px-3 py-2 text-sm border rounded-lg"
+                      />
+
+                      {passwordError && (
+                        <p className="text-xs text-red-600">{passwordError}</p>
+                      )}
+
+                      {passwordSuccess && (
+                        <p className="text-xs text-green-600">Password updated!</p>
+                      )}
+
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={passwordLoading || !newPassword}
+                        className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {passwordLoading ? 'Updating...' : 'Update Password'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      );
+    };
+
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Simple nav for org users */}
@@ -760,20 +880,20 @@ export function RegistryApp() {
               <Building2 size={20} className="text-blue-600" />
               <span className="font-medium text-gray-900">{organization.name}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setView('public')}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
               >
                 <Eye size={16} />
-                <span className="hidden sm:inline">Public View</span>
+                <span className="hidden sm:inline">Public</span>
               </button>
+              <OrgAccountSettings />
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
               >
                 <LogOut size={16} />
-                <span className="hidden sm:inline">{t('common.signOut')}</span>
               </button>
             </div>
           </div>
